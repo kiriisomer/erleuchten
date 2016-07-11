@@ -14,7 +14,7 @@ def create_environment():
     parser = argparse.ArgumentParser()
     parser.add_argument('--name')
 
-    parser.add_argument('--one-or-more', nargs='+')l
+    parser.add_argument('--one-or-more', nargs='+')
     param = parser.parse_args()
     print param
 
