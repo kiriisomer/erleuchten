@@ -19,6 +19,10 @@ class Testcase(object):
         self.name = name
         self.kwargs = kwargs
 
+        self.env_name = ""          # 测试环境名字
+        self.test_script = ""       # 测试脚本路径
+        self.except_script = ""     # 异常脚本路径
+
     def prepare(self):
         """"""
 
