@@ -1,6 +1,6 @@
 # coding:utf-8
 
-# entry of start an test
+# entry of environment
 
 import argparse
 
