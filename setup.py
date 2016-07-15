@@ -5,6 +5,11 @@ from setuptools import setup, find_packages
 
 console_entry_points = [
     'erleuchten-testcase=erleuchten.cmd.testcase:main',
+    'erleuchten-environment=erleuchten.cmd.environment:main',
+    'erleuchten-vm-template=erleuchten.cmd.vm_template:main',
+    'erleuchten-vm=erleuchten.cmd.vm:main',
+    'erleuchten-script=erleuchten.cmd.script:main',
+    'erleuchten-script-set=erleuchten.cmd.script_set:main',
 ]
 
 

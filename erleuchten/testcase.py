@@ -17,8 +17,12 @@ def create(args):
     t = Testcase()
     t.initial(args.name)
 
+
 def remove(args):
     """移除一个测试用例"""
+    t = Testcase()
+    t.initial(args.name)
+    t.delete(args.name)
 
 
 class Testcase(object):
@@ -33,7 +37,7 @@ class Testcase(object):
 
     def initial(self, name, env_name=None, prepare_script_set_name=None,
                 test_script_set_name=None):
-        """"""
+        """根据名字获取测试用例的信息"""
         self.name = name
         self.env_obj = Environment()
         self.prepare_script_set_obj = ScriptSet()
@@ -64,7 +68,9 @@ class Testcase(object):
     def get_status(self):
         """获取测试的状态（目前做的到吗）"""
 
-
     def get_result(self):
         """获取测试结果（exit_code）"""
+        return self.test_script_set_obj.get_result()
 
+    def delete(self):
+        """从磁盘删除测试用例"""

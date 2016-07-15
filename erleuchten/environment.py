@@ -5,8 +5,8 @@ import os
 
 import shutil
 
-from erleuchten import conf
-from erleuchten import VMXML
+from erleuchten.util import conf
+from erleuchten.util import VMXML
 
 VMTEMPLATE_STATUS_UNKNOWN = 'unknown'
 VMTEMPLATE_STATUS_NORMAL = 'normal'

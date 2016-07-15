@@ -7,7 +7,7 @@
 import signal
 import subprocess
 
-from erleuchten import conf
+from erleuchten.util import conf
 
 
 SCRIPT_STATUS_UNKNOWN = 'unknown'
@@ -82,6 +82,7 @@ class ScriptSet(object):
         self.script_list = []
         self.stdout = None
         self.stderr = None
+        self.exit_code_list = []
 
     def initial(self, name):
         """"""
@@ -106,6 +107,8 @@ class ScriptSet(object):
                     exit_code_list.append("TimeExceed")
 
             exit_code_list.append("CommandFormatError")
+        self.exit_code_list = exit_code_list
         return exit_code_list
 
-
+    def get_result(self):
+        return self.exit_code_list
