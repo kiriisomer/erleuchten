@@ -7,6 +7,9 @@
 import signal
 import subprocess
 
+from erleuchten import conf
+
+
 SCRIPT_STATUS_UNKNOWN = 'unknown'
 
 SCRIPT_USAGE_UNKNOWN = 'unknown'
@@ -21,13 +24,14 @@ def timeout_handler(signum, frame):
 
 
 def process_command(cmd, exceed_time=0):
-    """执行命令，使用信号SIGALRM来处理超时状态"""
+    """执行命令，等待命令完成。使用信号SIGALRM来处理超时状态"""
     signal.signal(signal.SIGALRM, timeout_handler)
     try:
         signal.alarm(exceed_time)
         cmd_list = [cmd]
         p = subprocess.Popen(cmd_list)
-        exit_code = p.wait()
+        p.wait()
+        exit_code = p.returncode
         signal.alarm(0)
         return exit_code
     except CommandTimeoutError:
@@ -81,7 +85,7 @@ class ScriptSet(object):
 
     def initial(self, name):
         """"""
-        self.name = ""
+        self.name = name
 
     def set_testscript(self, script_list):
         """add """

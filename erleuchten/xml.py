@@ -5,12 +5,13 @@ from lxml import etree
 
 
 class VMXML(object):
-    """对xml文件操作的封装。虚拟机都会有一个XML文件"""
+    """对xml文件操作的封装。虚拟机一般都会有一个XML文件"""
 
     def __init__(self, xml_path):
-        self.xml_path = xml_path
+        self.xml_path=xml_path
         self.xml_obj = None
-        self.open_parser()
+        if xml_path:
+            self.open_parser()
 
     def open_parser(self):
         utf8_parser = etree.XMLParser(encoding='utf-8', strip_cdata=False)

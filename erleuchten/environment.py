@@ -6,15 +6,15 @@ import os
 import shutil
 
 from erleuchten import conf
-
+from erleuchten import VMXML
 
 VMTEMPLATE_STATUS_UNKNOWN = 'unknown'
 VMTEMPLATE_STATUS_NORMAL = 'normal'
 VMTEMPLATE_STATUS_BAD = 'bad'
 
-ENVVM_STATUS_UNKNOWN = 'unknown'
-ENVVM_STATUS_STOP = 'stop'
-ENVVM_STATUS_RUNNING = 'runnning'
+ENVVM_STATUS_UNKNOWN = 'unknown'    # 未知，未初始化
+ENVVM_STATUS_STOP = 'stop'          # 初始化完毕，正常停止状态，
+ENVVM_STATUS_RUNNING = 'runnning'   # 初始化完毕，运行状态，
 
 
 # def define():
@@ -38,7 +38,7 @@ class VMTemplate(object):
 
     def __init__(self):
         self.name = ""
-        self.xml = None
+        self.xml_obj = None
         self.status = VMTEMPLATE_STATUS_UNKNOWN
         # self.device_path_dict = {}
 
@@ -47,6 +47,7 @@ class VMTemplate(object):
         self.name = name
         xml_path = os.path.join(conf.PATH_VM_TEMPLATE, self.name,
                                 "%s.xml" % self.name)
+        self.xml_obj = VMXML(xml_path)
 
         # self.device_path_dict = {}
 
@@ -59,28 +60,28 @@ class VMTemplate(object):
         # remove xml file and related disk img
         for i in self.device_path_dict.values():
             os.unlink(i)
-        os.unlink(self.xml.xml_path)
+        os.unlink(self.xml_obj.xml_path)
 
         # reset param
         self.name = ""
         self.status = VMTEMPLATE_STATUS_UNKNOWN
-        self.xml = None
+        self.xml_obj = None
         # self.device_path_dict = {}
 
     def _create_from_local_xml(self, name, xml_path, move_dev_files=False):
-        """"""
+        """从XML描述文件创建一个模板。
+        将XML文件复制到自己的目录，指定了move_dev_files的话，连磁盘文件也
+        一并复制进来"""
         self.name = name
-        self.xml_path = os.path.join(conf.PATH_VM_TEMPLATE, self.name,
-                                     "%s.xml" % self.name)
+        new_xml_path = os.path.join(conf.PATH_VM_TEMPLATE, self.name,
+                                    "%s.xml" % self.name)
         # 复制xml文件到目录中。
-        shutil.copy(xml_path, self.xml_path)
-        if move_dev_files:
-            for i in
+        shutil.copy(xml_path, new_xml_path)
+        # if move_dev_files:
+        #     for i in self.xml.get_device_path_list():
 
     def copy(self, src_obj):
         """copy and create a new VMTemplate"""
-
-
 
 
 class VM(object):
