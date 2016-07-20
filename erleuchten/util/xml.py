@@ -94,17 +94,70 @@ class ScriptConf(XML):
         if write_file:
             self.write_xml_conf()
 
+    def load_config(self):
+        """读取配置，返回一个字典"""
+        self.open_parser()
+        if self.xml_root_obj is None:
+            return {}
 
-def open_xml_file(xml_path):
-    utf8_parser = etree.XMLParser(encoding='utf-8', strip_cdata=False)
-    try:
-        xml_root_obj = etree.parse(xml_path, parser=utf8_parser)
-    except etree.XMLSyntaxError, e:
-        # 检查是不是文档为空，是的话返回None
-        log = e.error_log.filter_from_level(etree.ErrorLevels.FATAL)
-        entry = log[0]
-        if entry.type_name == "ERR_DOCUMENT_EMPTY":
-            xml_root_obj = None
+        s = self.xml_root_obj.xpath(
+            '/erleuchten/script[@name="%s"]' % self.name)
+        conf_dict = {}
+        conf_dict["script_name"] = s[0].get("script_name")
+        conf_dict["pid"] = s[0].get("pid")
+        conf_dict["exceed_time"] = s[0].get("exceed_time")
+        conf_dict["status"] = s[0].get("status")
+        return conf_dict
+
+
+class ScriptSetConf(XML):
+    """对Script类的xml配置文件操作的封装。"""
+
+    def __init__(self, xml_path, name):
+        super(ScriptSetConf, self).__init__(xml_path)
+        self.name = name
+
+    def get_name(self):
+        s = self.xml_root_obj.xpath(
+            '/erleuchten/scriptset[@name="%s"]' % self.name)
+        try:
+            return s[0].get("name")
+        except:
+            return None
+
+    def save_config(self, conf_dict, write_file=True):
+        """将配置保存起来"""
+        # 没有root则新建一个
+        if self.xml_root_obj is None:
+            root = etree.Element("erleuchten")
         else:
-            raise
-    return xml_root_obj
+            root = self.xml_root_obj
+
+        # 没有script则新建一个
+        s = self.xml_root_obj.xpath(
+            '/erleuchten/scriptset[@name="%s"]' % self.name)
+        if len(s) == 0:
+            s = etree.SubElement(root, "script")
+            s.set('name', self.name)
+
+        for i, j in conf_dict.items():
+            s.set(i, j)
+
+        self.xml_root_obj = root
+        if write_file:
+            self.write_xml_conf()
+
+    def load_config(self):
+        """读取配置，返回一个字典"""
+        self.open_parser()
+        if self.xml_root_obj is None:
+            return {}
+
+        s = self.xml_root_obj.xpath(
+            '/erleuchten/scriptset[@name="%s"]' % self.name)
+        conf_dict = {}
+        conf_dict["script_list"] = s[0].get("script_list")
+        conf_dict["stdout"] = s[0].get("stdout")
+        conf_dict["stderr"] = s[0].get("stderr")
+        conf_dict["exit_code_list"] = s[0].get("exit_code_list")
+        return conf_dict
