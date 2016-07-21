@@ -20,10 +20,14 @@ class XML(object):
         try:
             self.xml_root_obj = etree.parse(self.xml_path, parser=utf8_parser)
         except etree.XMLSyntaxError, e:
+            # 检查是不是空文档引起的打开出错
             log = e.error_log.filter_from_level(etree.ErrorLevels.FATAL)
             entry = log[0]
             if entry.type_name == "ERR_DOCUMENT_EMPTY":
                 self.xml_root_obj = None
+        except IOError:
+            # 无法打开文件
+            self.xml_root_obj = None
 
     def new_parser(self):
         """创建一个xml root对象，以往里面读写配置"""
@@ -64,14 +68,6 @@ class ScriptConf(XML):
         except:
             return None
 
-    def get_script_path(self):
-        s = self.xml_root_obj.xpath(
-            '/erleuchten/script[@name="%s"]' % self.name)
-        try:
-            return s[0].get("script_name")
-        except:
-            return None
-
     def save_config(self, conf_dict, write_file=True):
         """将配置保存起来"""
         # 没有root则新建一个
@@ -108,6 +104,14 @@ class ScriptConf(XML):
         conf_dict["exceed_time"] = s[0].get("exceed_time")
         conf_dict["status"] = s[0].get("status")
         return conf_dict
+
+    def get_script_path(self):
+        s = self.xml_root_obj.xpath(
+            '/erleuchten/script[@name="%s"]' % self.name)
+        try:
+            return s[0].get("script_name")
+        except:
+            return None
 
 
 class ScriptSetConf(XML):
@@ -156,8 +160,7 @@ class ScriptSetConf(XML):
         s = self.xml_root_obj.xpath(
             '/erleuchten/scriptset[@name="%s"]' % self.name)
         conf_dict = {}
-        conf_dict["script_list"] = s[0].get("script_list")
-        conf_dict["stdout"] = s[0].get("stdout")
-        conf_dict["stderr"] = s[0].get("stderr")
-        conf_dict["exit_code_list"] = s[0].get("exit_code_list")
+        conf_dict["script_name_list"] = s[0].get("script_name_list")
+        conf_dict["return_code_list"] = s[0].get("return_code_list")
+        conf_dict["status"] = s[0].get("status")
         return conf_dict

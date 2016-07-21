@@ -11,7 +11,7 @@ import shutil
 
 from erleuchten.util import conf
 from erleuchten.util import error
-from erleuchten.util.xml import ScriptConf
+from erleuchten.util.xml import ScriptConf, ScriptSetConf
 
 
 SHELL_EXECUTOR = '/bin/sh'
@@ -22,7 +22,6 @@ SCRIPT_STATUS_STOP = 'STOP'         # 停止状态，随时可以执行
 SCRIPT_STATUS_RUNNING = 'RUNNING'   # 运行状态
 
 SCRIPT_SET_STATUS_UNKNOWN = 'UNKNOWN'
-SCRIPT_SET_STATUS_NEW = 'NEW'           # 新对象，没有配置文件
 SCRIPT_SET_STATUS_STOP = 'STOP'         # 停止状态，随时可以执行
 SCRIPT_SET_STATUS_RUNNING = 'RUNNING'   # 运行状态
 
@@ -31,7 +30,10 @@ class CommandTimeoutError(Exception):
     pass
 
 
-def create(name, script_name):
+# ==============================================================================
+#
+# ==============================================================================
+def create_script(name, script_name):
     script_obj = Script()
     script_obj.load_conf(name)
     if script_obj.script_name != "":
@@ -42,7 +44,7 @@ def create(name, script_name):
     script_obj.initial(name, script_name)
 
 
-def remove(name):
+def remove_script(name):
     script_obj = Script()
     script_obj.load_conf(name)
     if script_obj.script_name != "":
@@ -51,7 +53,7 @@ def remove(name):
         shutil.rmtree(os.path.join(conf.PATH_SCRIPT, name))
 
 
-def run(name):
+def run_script(name):
     script_obj = Script()
     script_obj.load_conf(name)
     if script_obj.script_name == "":
@@ -64,6 +66,57 @@ def run(name):
         print("script status is not STOP")
 
 
+# ==============================================================================
+#
+# ==============================================================================
+def create_script_set(name, script_names):
+    script_set_obj = ScriptSet()
+    script_set_obj.load_conf(name)
+    if script_set_obj.script_name != "":
+        # 已经存在了
+        print("name already existed")
+        return
+
+    script_set_obj.initial(name, script_names)
+
+
+def set_script_set(name, script_names):
+    script_set_obj = ScriptSet()
+    script_set_obj.load_conf(name)
+    if script_set_obj.script_name == "":
+        # 不存在
+        print("script set not found")
+        return
+
+    script_set_obj.initial(name, script_names)
+
+
+def remove_script_set(name, force=False):
+    script_set_obj = ScriptSet()
+    script_set_obj.load_conf(name)
+    if script_set_obj.script_name != "":
+        # 存在,可以删掉
+        del script_set_obj
+        shutil.rmtree(os.path.join(conf.PATH_SCRIPT_SET, name))
+
+
+def run_script_set(name):
+    script_set_obj = ScriptSet()
+    script_set_obj.load_conf(name)
+    if script_set_obj.script_name == "":
+        # 不存在
+        print("script set not found")
+        return
+
+    if script_set_obj.status == SCRIPT_SET_STATUS_STOP:
+        script_set_obj.run()
+    else:
+        print("script status is not STOP")
+
+
+# ==============================================================================
+#
+# ==============================================================================
 def timeout_handler(signum, frame):
     """SIGALRM注册函数"""
     raise CommandTimeoutError
@@ -122,9 +175,10 @@ class Script(object):
     def check_exist(self):
         """"""
 
-    def load_conf(self):
+    def load_conf(self, name):
         """打开配置文件，读取配置初始化"""
         # 返回文件路径，使用sh执行
+        self.name = name
         conf_obj = ScriptConf(os.path.join(conf.PATH_SCRIPT, self.name,
                                            "%s.conf" % self.name), self.name)
         # 如果打开空文件，或记载名字错误，则无法继续下去
@@ -160,48 +214,78 @@ class ScriptSet(object):
 
     def __init__(self):
         self.name = ""
-        self.script_list = []
-        self.stdout = None
-        self.stderr = None
-        self.exit_code_list = []
+        self.script_obj_list = []
+        self.script_name_list = []
+        self.return_code_list = []
+        self.status = SCRIPT_SET_STATUS_UNKNOWN
 
-    def initial(self, name):
-        """"""
+    def initial(self, name, script_name_list=None):
+        """初始化一个新的对象"""
         self.name = name
-        self.load_conf()
+        if script_name_list is not None:
+            self.set_script(script_name_list)
+        self.status = SCRIPT_SET_STATUS_STOP
 
-    def load_conf(self):
+    def load_conf(self, name):
         """打开配置文件，读取配置初始化"""
+        self.name = name
         # 返回文件路径，使用sh执行
-        conf_obj = ScriptConf(os.path.join(conf.PATH_SCRIPT_SET, self.name,
-                                           "%s.conf" % self.name), self.name)
+        conf_obj = ScriptSetConf(os.path.join(conf.PATH_SCRIPT_SET,
+                                              self.name,
+                                              "%s.conf" % self.name),
+                                 self.name)
         # 如果打开空文件，或记载名字错误，则无法继续下去
         if conf_obj is None and conf_obj.get_name() is None:
             raise error.ScriptError(error.ERRNO_SCRIPT_OPENCONF_ERROR)
         conf_dict = conf_obj.load_config()
-        self.script_list = conf_dict["script_list"]
-        self.stdout = conf_dict["stdout"]
-        self.stderr = conf_dict["stderr"]
-        self.exit_code_list = conf_dict["exit_code_list"]
+        self.script_name_list = conf_dict["script_name_list"]
+        self.return_code_list = conf_dict["return_code_list"]
+        self.stdout = conf_dict["status"]
 
-    def set_testscript(self, script_list):
+    def save_conf(self):
+        """保存配置到文件"""
+        conf_dict = {
+            "name": self.name,
+            "script_name_list": self.script_name_list,
+            "return_code_list": self.return_code_list,
+            "status": self.status,
+        }
+        self.conf_obj.save_config(conf_dict)
+
+    def set_script(self, script_name_list=None):
         """设置测试脚本"""
-        self.script_list = script_list
+        if not isinstance(script_name_list, (list, tuple)):
+            return
+        self.script_name_list = list(script_name_list)
+
+    def load_script(self):
+        """从script name读取script信息出来"""
+        script_obj_list = []
+        for script_name in self.script_name_list:
+            script_obj = Script()
+            script_obj.load_conf(script_name)
+            if script_obj.script_name != "":
+                # 存在，可加进去
+                script_obj_list.append(script_obj)
+            else:
+                print "add <%s> error. can't open conf file" % script_name
+        self.script_obj_list = script_obj_list
 
     def run(self):
         """run scripts"""
-        exit_code_list = []
-        for ts in self.script_list:
+        self.load_script()
+        return_code_list = []
+        for ts in self.script_obj_list:
             if isinstance(ts, Script):
                 try:
                     exit_code = ts.run()
-                    exit_code_list.append(exit_code)
+                    return_code_list.append(exit_code)
                 except:
-                    exit_code_list.append("UnexpectedException")
+                    return_code_list.append("UnexpectedException")
             else:
-                exit_code_list.append("CommandFormatError")
-        self.exit_code_list = exit_code_list
-        return exit_code_list
+                return_code_list.append("CommandFormatError")
+        self.return_code_list = return_code_list
+        return return_code_list
 
     def get_result(self):
-        return self.exit_code_list
+        return self.return_code_list

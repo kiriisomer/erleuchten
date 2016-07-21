@@ -7,4 +7,48 @@ from erleuchten import script
 
 
 def main():
-    pass
+    main_parser = argparse.ArgumentParser(prog='erleuchten-script-set')
+    sub_parsers = main_parser.add_subparsers(help='erleuchten '
+                                             'test script set utility')
+
+    p_create = sub_parsers.add_parser('create', help='create a script set')
+    p_create.add_argument('--name', help='script set name', required=True)
+    p_create.add_argument('--script-name', dest="script_list", nargs="+",
+                          help='include script(s) name with order')
+    p_create.set_defaults(func=cmd_create)
+
+    p_set = sub_parsers.add_parser('set-script', help='create a script set')
+    p_set.add_argument('--name', help='script set name', required=True)
+    p_set.add_argument('--script-name', dest="script_list", nargs="+",
+                       help='include script(s) name with order')
+    p_set.set_defaults(func=cmd_set_script)
+
+    p_remove = sub_parsers.add_parser('remove', help='remove a script set')
+    p_remove.add_argument('--name', help='script set name', required=True)
+    p_remove.add_argument('--force',
+                          help="force remove if it's in a testcase",
+                          action='store_true', default=False)
+    p_remove.set_defaults(func=cmd_remove)
+
+    p_run = sub_parsers.add_parser('run', help='run script')
+    p_run.add_argument('--name', help='script name', required=True)
+    p_run.set_defaults(func=cmd_run)
+
+    args = main_parser.parse_args()
+    args.func(args)
+
+
+def cmd_create(args):
+    return script.create_script_set(args.name, args.script_list)
+
+
+def cmd_set_script(args):
+    return script.set_script_set(args.name, args.script_list)
+
+
+def cmd_remove(args):
+    return script.remove_script_set(args.name, args.force)
+
+
+def cmd_run(args):
+    return script.run_script_set(args.name)
