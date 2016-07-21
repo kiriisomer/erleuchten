@@ -4,16 +4,17 @@
 from setuptools import setup, find_packages
 
 console_entry_points = [
-    'erleuchten-testcase=erleuchten.cmd.testcase:main',
-    'erleuchten-environment=erleuchten.cmd.environment:main',
-    'erleuchten-vm-template=erleuchten.cmd.vm_template:main',
-    'erleuchten-vm=erleuchten.cmd.vm:main',
-    'erleuchten-script=erleuchten.cmd.script:main',
-    'erleuchten-script-set=erleuchten.cmd.script_set:main',
+    'erleuchten-testcase=erleuchten.cmds.testcase:main',
+    'erleuchten-environment=erleuchten.cmds.environment:main',
+    'erleuchten-vm-template=erleuchten.cmds.vm_template:main',
+    'erleuchten-vm=erleuchten.cmds.vm:main',
+    'erleuchten-script=erleuchten.cmds.script:main',
+    'erleuchten-script-set=erleuchten.cmds.script_set:main',
 ]
 
 
-setup_requires = ['shutil', ]
+# setup_requires = ['shutil', 'lxml']
+setup_requires = []
 
 
 setup(name='erleuchten',

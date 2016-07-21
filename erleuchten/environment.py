@@ -33,6 +33,7 @@ ENVVM_STATUS_RUNNING = 'runnning'   # 初始化完毕，运行状态，
 #     """fully delete an environment from disk"""
 
 
+
 class VMTemplate(object):
     """VM template"""
 

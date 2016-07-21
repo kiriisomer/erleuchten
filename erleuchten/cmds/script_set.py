@@ -7,4 +7,4 @@ from erleuchten import script
 
 
 def main():
-    passk
+    pass
