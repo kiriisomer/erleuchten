@@ -4,10 +4,11 @@
 import os
 
 import shutil
-
+import libvirt
 from erleuchten.util import conf
 from erleuchten.util import VMXML
 
+HYPERVISOR_URI = "qemu:///system"
 VMTEMPLATE_STATUS_UNKNOWN = 'unknown'
 VMTEMPLATE_STATUS_NORMAL = 'normal'
 VMTEMPLATE_STATUS_BAD = 'bad'
@@ -17,21 +18,101 @@ ENVVM_STATUS_STOP = 'stop'          # 初始化完毕，正常停止状态，
 ENVVM_STATUS_RUNNING = 'runnning'   # 初始化完毕，运行状态，
 
 
-# def define():
-#     """define an environment"""
+def list_domains(status):
+    domains = []
+    if status in ['all', 'running']:
+        domains += _list_active_domains()
+    if status in ['all', 'stopped']:
+        domains += _list_inactive_domains()
+    print('\n'.join(domains))
 
 
-# def prepare():
-#     """start an environment and install requested software"""
+def _list_active_domains():
+    conn = libvirt.open(HYPERVISOR_URI)
+    domains = []
+    for id_ in conn.listDomainsID():
+        domains.append(conn.lookupByID(id_).name())
+    return domains
 
 
-# def stop():
-#     """force stop an environment"""
+def _list_inactive_domains():
+    conn = libvirt.open(HYPERVISOR_URI)
+    domains = []
+    for id_ in conn.listDefinedDomains():
+        domains.append(conn.lookupByID(id_).name())
+    return domains
 
 
-# def remove():
-#     """fully delete an environment from disk"""
+def poweron_domain_by_id(domain_id):
+    try:
+        conn = libvirt.open(HYPERVISOR_URI)
+        dom = conn.lookupByID(domain_id)
+        if dom.create() == 0:
+            print("domain <id: {0}> started".format(domain_id))
+        else:
+            print("domain <id: {0}> start failed".format(domain_id))
+    except libvirt.libvirtError, e:
+        print("poweron failed")
+        print(e)
+        return
 
+
+def poweron_domain_by_name(domain_name):
+    try:
+        conn = libvirt.open(HYPERVISOR_URI)
+        dom = conn.lookupByName(domain_name)
+        if dom.create() == 0:
+            print("domain <name: {0}> started".format(domain_name))
+        else:
+            print("domain <name: {0}> start failed".format(domain_name))
+    except libvirt.libvirtError, e:
+        print("poweron failed")
+        print(e)
+        return
+
+
+def poweroff_domain_by_name(domain_name):
+    try:
+        conn = libvirt.open(HYPERVISOR_URI)
+        dom = conn.lookupByName(domain_name)
+        if dom.shutdown() == 0:
+            print("domain <name: {0}> shutdown".format(domain_name))
+        else:
+            print("domain <name: {0}> shutdown failed".format(domain_name))
+    except libvirt.libvirtError, e:
+        print("shutdown failed")
+        print(e)
+        return
+
+
+def destroy_domain_by_name(domain_name):
+    try:
+        conn = libvirt.open(HYPERVISOR_URI)
+        dom = conn.lookupByName(domain_name)
+        if dom.destroy() == 0:
+            print("domain <name: {0}> shutdown".format(domain_name))
+        else:
+            print("domain <name: {0}> shutdown failed".format(domain_name))
+    except libvirt.libvirtError, e:
+        print("shutdown failed")
+        print(e)
+        return
+
+
+def list_domain_disk(status):
+
+
+class VM(object):
+    """single VM"""
+
+    def __init__(self):
+        self.name = ""
+        self.env_name = ""
+        self.order = -1
+        self.status = ENVVM_STATUS_UNKNOWN
+        self.ip = ""
+        self.ssh_user = "root"
+        self.ssh_user_pswd = "111111"
 
 
 class VMTemplate(object):
@@ -83,41 +164,6 @@ class VMTemplate(object):
 
     def copy(self, src_obj):
         """copy and create a new VMTemplate"""
-
-
-class VM(object):
-    """single VM"""
-
-    def __init__(self):
-        self.name = ""
-        self.env_name = ""
-        self.order = -1
-        self.status = ENVVM_STATUS_UNKNOWN
-        self.ip = ""
-        self.ssh_user = "root"
-        self.ssh_user_pswd = "111111"
-
-    def initial(self, name):
-        """init class by vm_template's name"""
-        self.name = name
-
-    def create(self):
-        self._spawn_from_template()
-
-    def _spawn_from_template(self):
-        """create VM from a VM_template"""
-
-    def power_on(self):
-        """"""
-
-    def power_off(self):
-        """"""
-
-    def insert_disk(self):
-        """"""
-
-    def eject_disk(self):
-        """"""
 
 
 class Environment(object):

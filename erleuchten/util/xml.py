@@ -52,6 +52,9 @@ class VMXML(XML):
         s = self.xml_root_obj.xpath('/domain/devices/disk/source')
         return [x.get('file') for x in s]
 
+    def get_all_device(self):
+        pass ###################################
+
 
 class ScriptConf(XML):
     """对Script类的xml配置文件操作的封装。"""
