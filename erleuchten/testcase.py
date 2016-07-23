@@ -73,4 +73,4 @@ class Testcase(object):
         return self.test_script_set_obj.get_result()
 
     def delete(self):
-        """从磁盘删除测试用例"""
+        """删除测试用例"""

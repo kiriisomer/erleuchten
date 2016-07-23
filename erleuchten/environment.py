@@ -3,6 +3,7 @@
 # prepare testing environment(vm, software, yeesan, etc.)
 import os
 
+import StringIO
 import shutil
 import libvirt
 from erleuchten.util import conf
@@ -99,20 +100,27 @@ def destroy_domain_by_name(domain_name):
         return
 
 
-def list_domain_disk(status):
+def list_domain_disk(domain_name):
+    conn = libvirt.open(HYPERVISOR_URI)
+    dom = conn.lookupByName(domain_name)
+    xmldata = dom.XMLDesc(0)
+    xml_obj = VMXML(StringIO.StringIO(xmldata))
+    d = xml_obj.get_device_path_list()
+    for i in d:
+        print '{0} {1}'.format(i[0], i[1])
 
 
-class VM(object):
-    """single VM"""
+# class VM(object):
+#     """single VM"""
 
-    def __init__(self):
-        self.name = ""
-        self.env_name = ""
-        self.order = -1
-        self.status = ENVVM_STATUS_UNKNOWN
-        self.ip = ""
-        self.ssh_user = "root"
-        self.ssh_user_pswd = "111111"
+#     def __init__(self):
+#         self.name = ""
+#         self.env_name = ""
+#         self.order = -1
+#         self.status = ENVVM_STATUS_UNKNOWN
+#         self.ip = ""
+#         self.ssh_user = "root"
+#         self.ssh_user_pswd = "111111"
 
 
 class VMTemplate(object):

@@ -8,6 +8,7 @@ class XML(object):
     """环境，测试用例等的配置文件都使用xml"""
 
     def __init__(self, xml_path=""):
+        """xml_path可以是文件路径，也可以是stringIO对象"""
         self.xml_path = xml_path
         self.xml_root_obj = None
         if xml_path:
@@ -53,7 +54,13 @@ class VMXML(XML):
         return [x.get('file') for x in s]
 
     def get_all_device(self):
-        pass ###################################
+        """获取设备 路径名与文件路径"""
+        s = self.xml_obj.xpath('/domain/devices/disk[@device="disk"]')
+        rtn_list = []
+        for x in s:
+            d = (x.xpath('target')[0].get("dev"))
+            f = (x.xpath('source')[0].get("file"))
+            rtn_list.append([d, f])
 
 
 class ScriptConf(XML):
