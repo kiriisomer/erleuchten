@@ -16,7 +16,7 @@ def main():
                         choices=['all', 'running', 'stopped'], default='all')
     p_list.set_defaults(func=cmd_list_domain)
 
-    p_list_disk = sub_parsers.add_parser('list', help='list domain disks')
+    p_list_disk = sub_parsers.add_parser('list-disk', help='list domain disks')
     p_list_disk.add_argument('--name', help='domain name', required=True)
     p_list_disk.set_defaults(func=cmd_list_domain_disk)
 

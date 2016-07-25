@@ -2,6 +2,7 @@
 
 # xml utilities
 from lxml import etree
+from erleuchten.util.util import create_file_path
 
 
 class XML(object):
@@ -38,6 +39,7 @@ class XML(object):
         """将xml root对象写入指定文件"""
         if path is None:
             path = self.xml_path
+        create_file_path(self.xml_path)
         with open(path, 'w+') as fp:
             fp.write('''<?xml version="1.0" encoding="UTF-8"?>''')
             fp.write('\n')
@@ -71,6 +73,8 @@ class ScriptConf(XML):
         self.name = name
 
     def get_name(self):
+        if self.xml_root_obj is None:
+            return None
         s = self.xml_root_obj.xpath(
             '/erleuchten/script[@name="%s"]' % self.name)
         try:
@@ -132,6 +136,8 @@ class ScriptSetConf(XML):
         self.name = name
 
     def get_name(self):
+        if self.xml_root_obj is None:
+            return None
         s = self.xml_root_obj.xpath(
             '/erleuchten/scriptset[@name="%s"]' % self.name)
         try:

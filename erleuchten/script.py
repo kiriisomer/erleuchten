@@ -12,6 +12,7 @@ import shutil
 from erleuchten.util import conf
 from erleuchten.util import error
 from erleuchten.util.xml import ScriptConf, ScriptSetConf
+from erleuchten.util.util import create_dir
 
 
 SHELL_EXECUTOR = '/bin/sh'
@@ -67,10 +68,13 @@ def run_script(name):
 
 
 def list_script():
-    for i in os.listdir(conf.PATH_SCRIPT):
-        if os.path.isfile(os.path.join(conf.PATH_SCRIPT, i,
-                                       "%s.conf" % i)):
-            print i
+    try:
+        for i in os.listdir(conf.PATH_SCRIPT):
+            if os.path.isfile(os.path.join(conf.PATH_SCRIPT, i,
+                                           "%s.conf" % i)):
+                print i
+    except OSError:
+        pass
 
 
 # ==============================================================================
@@ -123,11 +127,13 @@ def run_script_set(name):
 
 
 def list_script_set():
-    for i in os.listdir(conf.PATH_SCRIPT_SET):
-        if os.path.isfile(os.path.join(conf.PATH_SCRIPT_SET, i,
-                                       "%s.conf" % i)):
-            print i
-
+    try:
+        for i in os.listdir(conf.PATH_SCRIPT_SET):
+            if os.path.isfile(os.path.join(conf.PATH_SCRIPT_SET, i,
+                                           "%s.conf" % i)):
+                print i
+    except OSError:
+        pass
 
 # ==============================================================================
 #
@@ -164,6 +170,7 @@ class Script(object):
         self.script_name = script_name
         filename = os.path.split(script_name)[1]
         new_path = os.path.join(conf.PATH_SCRIPT, self.name, filename)
+        ensure_tree(new_path)
         shutil.copy(script_name, new_path)
         self.script_name = new_path
 
