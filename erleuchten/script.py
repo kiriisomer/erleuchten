@@ -61,9 +61,16 @@ def run_script(name):
         return
 
     if script_obj.status == SCRIPT_STATUS_STOP:
-        script_obj.run()
+        print script_obj.run()
     else:
         print("script status is not STOP")
+
+
+def list_script():
+    for i in os.listdir(conf.PATH_SCRIPT):
+        if os.path.isfile(os.path.join(conf.PATH_SCRIPT, i,
+                                       "%s.conf" % i)):
+            print i
 
 
 # ==============================================================================
@@ -109,9 +116,17 @@ def run_script_set(name):
         return
 
     if script_set_obj.status == SCRIPT_SET_STATUS_STOP:
-        script_set_obj.run()
+        rtn_list = script_set_obj.run()
+        print '\n'.join(rtn_list)
     else:
         print("script status is not STOP")
+
+
+def list_script_set():
+    for i in os.listdir(conf.PATH_SCRIPT_SET):
+        if os.path.isfile(os.path.join(conf.PATH_SCRIPT_SET, i,
+                                       "%s.conf" % i)):
+            print i
 
 
 # ==============================================================================
@@ -274,11 +289,13 @@ class ScriptSet(object):
     def run(self):
         """run scripts"""
         self.load_script()
+        f_stdout = open(os.path.join(conf.PATH_SCRIPT_SET, self.name,
+                                     "%s.out" % self.name), 'a+', 0)
         return_code_list = []
         for ts in self.script_obj_list:
             if isinstance(ts, Script):
                 try:
-                    exit_code = ts.run()
+                    exit_code = ts.run(stdout=f_stdout)
                     return_code_list.append(exit_code)
                 except:
                     return_code_list.append("UnexpectedException")

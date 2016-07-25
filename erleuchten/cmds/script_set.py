@@ -17,7 +17,8 @@ def main():
                           help='include script(s) name with order')
     p_create.set_defaults(func=cmd_create)
 
-    p_set = sub_parsers.add_parser('set-script', help='create a script set')
+    p_set = sub_parsers.add_parser('set-script',
+                                   help='set script set including scripts')
     p_set.add_argument('--name', help='script set name', required=True)
     p_set.add_argument('--script-name', dest="script_list", nargs="+",
                        help='include script(s) name with order')
@@ -33,6 +34,9 @@ def main():
     p_run = sub_parsers.add_parser('run', help='run script')
     p_run.add_argument('--name', help='script name', required=True)
     p_run.set_defaults(func=cmd_run)
+
+    p_list = sub_parsers.add_parser('list', help='list all script')
+    p_list.set_defaults(func=cmd_list)
 
     args = main_parser.parse_args()
     args.func(args)
@@ -52,3 +56,7 @@ def cmd_remove(args):
 
 def cmd_run(args):
     return script.run_script_set(args.name)
+
+
+def cmd_list(args):
+    return script.list_script_set()

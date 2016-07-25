@@ -28,6 +28,9 @@ def main():
     p_run.add_argument('--name', help='script name', required=True)
     p_run.set_defaults(func=cmd_run)
 
+    p_list = sub_parsers.add_parser('list', help='list all script')
+    p_list.set_defaults(func=cmd_list)
+
     args = main_parser.parse_args()
     args.func(args)
 
@@ -42,3 +45,7 @@ def cmd_remove(args):
 
 def cmd_run(args):
     return script.run_script(args.name)
+
+
+def cmd_list(args):
+    return script.list_script()

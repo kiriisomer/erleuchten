@@ -14,11 +14,23 @@ def main():
     p_create = sub_parsers.add_parser('create', help='create a testcase')
     p_create.add_argument('--name', help='testcase name', required=True)
     p_create.add_argument('--env_name', help='testcase env name', default=None)
-    p_create.set_defaults(func=testcase.create)
+    p_create.set_defaults(func=cmd_create)
 
-    parser_b = sub_parsers.add_parser('remove', help='remove a testcase')
-    parser_b.add_argument('--name', help='testcase name', required=True)
-    p_create.set_defaults(func=testcase.remove)
+    p_remove = sub_parsers.add_parser('remove', help='remove a testcase')
+    p_remove.add_argument('--name', help='testcase name', required=True)
+    p_remove.set_defaults(func=cmd_remove)
 
     args = main_parser.parse_args()
     args.func(args)
+
+
+def cmd_create(args):
+    testcase.create()
+
+
+def cmd_remove(args):
+    testcase.remove(args.name)
+
+
+def run(args):
+    testcase.run(args.name)
