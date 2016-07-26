@@ -91,14 +91,13 @@ class ScriptConf(XML):
             root = self.xml_root_obj
 
         # 没有script则新建一个
-        s = self.xml_root_obj.xpath(
-            '/erleuchten/script[@name="%s"]' % self.name)
+        s = root.xpath('/erleuchten/script[@name="%s"]' % self.name)
         if len(s) == 0:
             s = etree.SubElement(root, "script")
             s.set('name', self.name)
 
         for i, j in conf_dict.items():
-            s.set(i, j)
+            s.set(str(i), str(j))
 
         self.xml_root_obj = root
         if write_file:
@@ -154,14 +153,13 @@ class ScriptSetConf(XML):
             root = self.xml_root_obj
 
         # 没有script则新建一个
-        s = self.xml_root_obj.xpath(
-            '/erleuchten/scriptset[@name="%s"]' % self.name)
+        s = root.xpath('/erleuchten/scriptset[@name="%s"]' % self.name)
         if len(s) == 0:
             s = etree.SubElement(root, "script")
             s.set('name', self.name)
 
         for i, j in conf_dict.items():
-            s.set(i, j)
+            s.set(str(i), str(j))
 
         self.xml_root_obj = root
         if write_file:

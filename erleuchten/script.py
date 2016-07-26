@@ -39,10 +39,11 @@ def create_script(name, script_name):
     script_obj.load_conf(name)
     if script_obj.script_name != "":
         # 已经存在了
-        print("name already existed")
+        print("{name} already existed".format(name))
         return
 
     script_obj.initial(name, script_name)
+    script_obj.save_conf()
 
 
 def remove_script(name):
@@ -62,7 +63,7 @@ def run_script(name):
         return
 
     if script_obj.status == SCRIPT_STATUS_STOP:
-        print script_obj.run()
+        script_obj.run()
     else:
         print("script status is not STOP")
 
@@ -89,6 +90,7 @@ def create_script_set(name, script_names):
         return
 
     script_set_obj.initial(name, script_names)
+    script_set_obj.save_conf()
 
 
 def set_script_set(name, script_names):
@@ -100,6 +102,7 @@ def set_script_set(name, script_names):
         return
 
     script_set_obj.initial(name, script_names)
+    script_set_obj.save_conf()
 
 
 def remove_script_set(name, force=False):
@@ -135,6 +138,7 @@ def list_script_set():
     except OSError:
         pass
 
+
 # ==============================================================================
 #
 # ==============================================================================
@@ -169,10 +173,10 @@ class Script(object):
         """将脚本复制进来"""
         self.script_name = script_name
         filename = os.path.split(script_name)[1]
-        new_path = os.path.join(conf.PATH_SCRIPT, self.name, filename)
-        ensure_tree(new_path)
-        shutil.copy(script_name, new_path)
-        self.script_name = new_path
+        new_path_name = os.path.join(conf.PATH_SCRIPT, self.name, filename)
+        create_dir(os.path.join(conf.PATH_SCRIPT, self.name))
+        shutil.copy(script_name, new_path_name)
+        self.script_name = new_path_name
 
     def run(self, stdout=None):
         """run script
@@ -203,14 +207,15 @@ class Script(object):
         self.name = name
         conf_obj = ScriptConf(os.path.join(conf.PATH_SCRIPT, self.name,
                                            "%s.conf" % self.name), self.name)
+        self.conf_obj = conf_obj
         # 如果打开空文件，或记载名字错误，则无法继续下去
         if conf_obj.xml_root_obj is None and conf_obj.get_name() is None:
             return
             # raise error.ScriptError(error.ERRNO_SCRIPT_OPENCONF_ERROR)
         conf_dict = conf_obj.load_config()
         self.script_name = conf_dict["script_name"]
-        self.pid = conf_dict["pid"]
-        self.exceed_time = conf_dict["exceed_time"]
+        self.pid = int(conf_dict["pid"])
+        self.exceed_time = int(conf_dict["exceed_time"])
         self.status = conf_dict["status"]
 
     def save_conf(self):
@@ -256,6 +261,7 @@ class ScriptSet(object):
                                               self.name,
                                               "%s.conf" % self.name),
                                  self.name)
+        self.conf_obj = conf_obj
         # 如果打开空文件，或记载名字错误，则无法继续下去
         if conf_obj is None and conf_obj.get_name() is None:
             raise error.ScriptError(error.ERRNO_SCRIPT_OPENCONF_ERROR)
