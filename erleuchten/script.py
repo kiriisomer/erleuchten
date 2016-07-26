@@ -13,9 +13,8 @@ from erleuchten.util import conf
 from erleuchten.util import error
 from erleuchten.util.xml import ScriptConf, ScriptSetConf
 from erleuchten.util.util import create_dir
-
-
-SHELL_EXECUTOR = '/bin/sh'
+from erleuchten.util.error import ErleuchtenException
+from erleuchten.util.error import ERRNO_SAVE_PATH_NOT_SPECIFY
 
 
 SCRIPT_STATUS_UNKNOWN = 'UNKNOWN'
@@ -28,6 +27,7 @@ SCRIPT_SET_STATUS_RUNNING = 'RUNNING'   # 运行状态
 
 
 class CommandTimeoutError(Exception):
+    """执行命令专用异常，用于捕捉超时"""
     pass
 
 
@@ -35,12 +35,13 @@ class CommandTimeoutError(Exception):
 #
 # ==============================================================================
 def create_script(name, script_name):
-    script_obj = Script()
-    script_obj.load_conf(name)
-    if script_obj.script_name != "":
+    if os.path.exists(os.path.join(conf.PATH_SCRIPT, name, "%s.conf" % name)):
         # 已经存在了
         print("{name} already existed".format(name))
         return
+
+    script_obj = Script()
+    script_obj.load_conf(name)
 
     script_obj.initial(name, script_name)
     script_obj.save_conf()
@@ -63,7 +64,8 @@ def run_script(name):
         return
 
     if script_obj.status == SCRIPT_STATUS_STOP:
-        script_obj.run()
+        rtn_code = script_obj.run()
+        print(rtn_code)
     else:
         print("script status is not STOP")
 
@@ -82,45 +84,46 @@ def list_script():
 #
 # ==============================================================================
 def create_script_set(name, script_names):
-    script_set_obj = ScriptSet()
-    script_set_obj.load_conf(name)
-    if script_set_obj.script_name != "":
+    if os.path.exists(os.path.join(conf.PATH_SCRIPT_SET, name,
+                                   "%s.conf" % name)):
         # 已经存在了
         print("name already existed")
         return
+
+    script_set_obj = ScriptSet()
+    script_set_obj.load_conf(name)
 
     script_set_obj.initial(name, script_names)
     script_set_obj.save_conf()
 
 
 def set_script_set(name, script_names):
-    script_set_obj = ScriptSet()
-    script_set_obj.load_conf(name)
-    if script_set_obj.script_name == "":
-        # 不存在
+    if not os.path.exists(os.path.join(conf.PATH_SCRIPT_SET, name,
+                                       "%s.conf" % name)):
+        # script set不存在
         print("script set not found")
         return
+
+    script_set_obj = ScriptSet()
+    script_set_obj.load_conf(name)
 
     script_set_obj.initial(name, script_names)
     script_set_obj.save_conf()
 
 
 def remove_script_set(name, force=False):
-    script_set_obj = ScriptSet()
-    script_set_obj.load_conf(name)
-    if script_set_obj.script_name != "":
-        # 存在,可以删掉
-        del script_set_obj
-        shutil.rmtree(os.path.join(conf.PATH_SCRIPT_SET, name))
+    shutil.rmtree(os.path.join(conf.PATH_SCRIPT_SET, name))
 
 
 def run_script_set(name):
-    script_set_obj = ScriptSet()
-    script_set_obj.load_conf(name)
-    if script_set_obj.script_name == "":
-        # 不存在
+    if not os.path.exists(os.path.join(conf.PATH_SCRIPT_SET, name,
+                                       "%s.conf" % name)):
+        # script set不存在
         print("script set not found")
         return
+
+    script_set_obj = ScriptSet()
+    script_set_obj.load_conf(name)
 
     if script_set_obj.status == SCRIPT_SET_STATUS_STOP:
         rtn_list = script_set_obj.run()
@@ -157,6 +160,7 @@ class Script(object):
         self.exceed_time = 0    # 超时时间
         self.status = SCRIPT_STATUS_UNKNOWN
         self.stdout = None
+        self.conf_obj = None
 
     def initial(self, name, script_name, exceed_time=0, stdout=None):
         """初始化一个新的对象"""
@@ -185,7 +189,7 @@ class Script(object):
             self.stdout = stdout
         signal.signal(signal.SIGALRM, timeout_handler)
         batch = os.path.join(conf.PATH_SCRIPT, self.name, self.script_name)
-        cmd_list = [SHELL_EXECUTOR, batch]
+        cmd_list = [conf.SHELL_EXECUTOR, batch]
         try:
             signal.alarm(self.exceed_time)
             p = subprocess.Popen(cmd_list, stdout=self.stdout)
@@ -220,6 +224,8 @@ class Script(object):
 
     def save_conf(self):
         """保存配置到文件"""
+        if self.conf_obj is None:
+            raise ErleuchtenException(errno=ERRNO_SAVE_PATH_NOT_SPECIFY)
         conf_dict = {
             "name": self.name,
             "script_name": self.script_name,
@@ -266,12 +272,14 @@ class ScriptSet(object):
         if conf_obj is None and conf_obj.get_name() is None:
             raise error.ScriptError(error.ERRNO_SCRIPT_OPENCONF_ERROR)
         conf_dict = conf_obj.load_config()
-        self.script_name_list = conf_dict["script_name_list"]
-        self.return_code_list = conf_dict["return_code_list"]
-        self.stdout = conf_dict["status"]
+        self.script_name_list = conf_dict.get("script_name_list", [])
+        self.return_code_list = conf_dict.get("return_code_list", [])
+        self.status = conf_dict.get("status")
 
     def save_conf(self):
         """保存配置到文件"""
+        if self.conf_obj is None:
+            raise ErleuchtenException(errno=ERRNO_SAVE_PATH_NOT_SPECIFY)
         conf_dict = {
             "name": self.name,
             "script_name_list": self.script_name_list,
@@ -296,7 +304,8 @@ class ScriptSet(object):
                 # 存在，可加进去
                 script_obj_list.append(script_obj)
             else:
-                print "add <%s> error. can't open conf file" % script_name
+                print ("add <%s> error. can't open conf file. "
+                       "will ignore it" % script_name)
         self.script_obj_list = script_obj_list
 
     def run(self):
@@ -309,7 +318,7 @@ class ScriptSet(object):
             if isinstance(ts, Script):
                 try:
                     exit_code = ts.run(stdout=f_stdout)
-                    return_code_list.append(exit_code)
+                    return_code_list.append(str(exit_code))
                 except:
                     return_code_list.append("UnexpectedException")
             else:

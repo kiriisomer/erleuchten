@@ -91,10 +91,12 @@ class ScriptConf(XML):
             root = self.xml_root_obj
 
         # 没有script则新建一个
-        s = root.xpath('/erleuchten/script[@name="%s"]' % self.name)
-        if len(s) == 0:
+        result = root.xpath('/erleuchten/script[@name="%s"]' % self.name)
+        if len(result) == 0:
             s = etree.SubElement(root, "script")
             s.set('name', self.name)
+        else:
+            s = result[0]
 
         for i, j in conf_dict.items():
             s.set(str(i), str(j))
@@ -153,13 +155,27 @@ class ScriptSetConf(XML):
             root = self.xml_root_obj
 
         # 没有script则新建一个
-        s = root.xpath('/erleuchten/scriptset[@name="%s"]' % self.name)
-        if len(s) == 0:
-            s = etree.SubElement(root, "script")
-            s.set('name', self.name)
+        result = root.xpath(
+            '/erleuchten/scriptset[@name="%s"]' % self.name)
+        if len(result) == 0:
+            set_obj = etree.SubElement(root, "scriptset")
+            set_obj.set('name', self.name)
+        else:
+            set_obj = result[0]
 
         for i, j in conf_dict.items():
-            s.set(str(i), str(j))
+            if i == 'script_name_list':
+                # 使用子元素保存script
+                for k in set_obj.iterchildren():
+                    set_obj.remove(k)
+                for m in conf_dict[i]:
+                    s = etree.SubElement(set_obj, "script")
+                    s.set('name', str(m))
+            elif i == 'return_code_list':
+                # 使用空格分隔的字符串保存返回代码
+                set_obj.set(str(i), ' '.join([str(x) for x in j]))
+            else:
+                set_obj.set(str(i), str(j))
 
         self.xml_root_obj = root
         if write_file:
@@ -171,10 +187,16 @@ class ScriptSetConf(XML):
         if self.xml_root_obj is None:
             return {}
 
-        s = self.xml_root_obj.xpath(
+        set_obj = self.xml_root_obj.xpath(
             '/erleuchten/scriptset[@name="%s"]' % self.name)
         conf_dict = {}
-        conf_dict["script_name_list"] = s[0].get("script_name_list")
-        conf_dict["return_code_list"] = s[0].get("return_code_list")
-        conf_dict["status"] = s[0].get("status")
+        conf_dict["return_code_list"] = [
+            x for x in set_obj[0].get("return_code_list").split()]
+        conf_dict["status"] = set_obj[0].get("status")
+
+        script_name_list = []
+        for s in set_obj[0].xpath('script'):
+            script_name_list.append(s.get("name"))
+        conf_dict["script_name_list"] = script_name_list
+
         return conf_dict

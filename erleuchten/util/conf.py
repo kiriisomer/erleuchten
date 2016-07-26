@@ -9,4 +9,4 @@ PATH_VM_TEMPLATE = '/home/erleuchten/vm_template'
 PATH_VM = '/home/erleuchten/vm'
 PATH_ENVIRONMENT = '/home/erleuchten/environment'
 
-
+SHELL_EXECUTOR = '/bin/sh'
