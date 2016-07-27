@@ -7,9 +7,16 @@ import StringIO
 import shutil
 import libvirt
 from erleuchten.util import conf
-from erleuchten.util import VMXML
+from erleuchten.util.xml import VMXML
 
 HYPERVISOR_URI = "qemu:///system"
+DISK_XML = ("<disk type='file' device='disk'>"
+            "<driver name='qemu' type='{format}' cache='none'/>"
+            "<source file='{source}'/>"
+            "<target dev='{target}' bus='virtio'/>"
+            "</disk>")
+
+
 VMTEMPLATE_STATUS_UNKNOWN = 'unknown'
 VMTEMPLATE_STATUS_NORMAL = 'normal'
 VMTEMPLATE_STATUS_BAD = 'bad'
@@ -19,13 +26,16 @@ ENVVM_STATUS_STOP = 'stop'          # 初始化完毕，正常停止状态，
 ENVVM_STATUS_RUNNING = 'runnning'   # 初始化完毕，运行状态，
 
 
+# ##############################################################################
+#
+# ##############################################################################
 def list_domains(status):
     domains = []
     if status in ['all', 'running']:
         domains += _list_active_domains()
     if status in ['all', 'stopped']:
         domains += _list_inactive_domains()
-    print('\n'.join(domains))
+    return domains
 
 
 def _list_active_domains():
@@ -44,26 +54,12 @@ def _list_inactive_domains():
     return domains
 
 
-def poweron_domain_by_id(domain_id):
-    try:
-        conn = libvirt.open(HYPERVISOR_URI)
-        dom = conn.lookupByID(domain_id)
-        if dom.create() == 0:
-            print("domain <id: {0}> started".format(domain_id))
-        else:
-            print("domain <id: {0}> start failed".format(domain_id))
-    except libvirt.libvirtError, e:
-        print("poweron failed")
-        print(e)
-        return
-
-
 def poweron_domain_by_name(domain_name):
     try:
         conn = libvirt.open(HYPERVISOR_URI)
         dom = conn.lookupByName(domain_name)
         if dom.create() == 0:
-            print("domain <name: {0}> started".format(domain_name))
+            print("domain <name: {0}> start".format(domain_name))
         else:
             print("domain <name: {0}> start failed".format(domain_name))
     except libvirt.libvirtError, e:
@@ -100,15 +96,52 @@ def destroy_domain_by_name(domain_name):
         return
 
 
+def undefine_domain_by_name(domain_name):
+    try:
+        conn = libvirt.open(HYPERVISOR_URI)
+        dom = conn.lookupByName(domain_name)
+        if dom.undefine() == 0:
+            print("domain <name: {0}> undefine".format(domain_name))
+        else:
+            print("domain <name: {0}> undefine failed".format(domain_name))
+    except libvirt.libvirtError, e:
+        print("shutdown failed")
+        print(e)
+        return
+
+
 def list_domain_disk(domain_name):
     conn = libvirt.open(HYPERVISOR_URI)
     dom = conn.lookupByName(domain_name)
     xmldata = dom.XMLDesc(0)
     xml_obj = VMXML(StringIO.StringIO(xmldata))
-    d = xml_obj.get_device_path_list()
-    for i in d:
-        print '{0} {1}'.format(i[0], i[1])
+    return xml_obj.get_device_path_list()
 
+
+def attach_disk(domain_name, src, tgt, fmt):
+    conn = libvirt.open(HYPERVISOR_URI)
+    dom = conn.lookupByName(domain_name)
+    disk_xml = DISK_XML.format(source=src, target=tgt, format=fmt)
+    dom.attachDevice(disk_xml)
+
+
+def detach_disk(domain_name, tgt):
+    conn = libvirt.open(HYPERVISOR_URI)
+    dom = conn.lookupByName(domain_name)
+
+    xmldata = dom.XMLDesc(0)
+    xml_obj = VMXML(StringIO.StringIO(xmldata))
+    (_, src, fmt) = xml_obj.get_disk_device_info_by_dev(tgt)
+
+    disk_xml = DISK_XML.format(source=src, target=tgt, format=fmt)
+    dom.detachDevice(disk_xml)
+
+
+# ##############################################################################
+#
+# ##############################################################################
+def env_create(name):
+    pass
 
 # class VM(object):
 #     """single VM"""
@@ -119,6 +152,9 @@ def list_domain_disk(domain_name):
 #         self.order = -1
 #         self.status = ENVVM_STATUS_UNKNOWN
 #         self.ip = ""
+#         self.mask = ""
+#         self.gateway = ""
+#         self.dns = ""
 #         self.ssh_user = "root"
 #         self.ssh_user_pswd = "111111"
 

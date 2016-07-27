@@ -3,6 +3,8 @@
 # xml utilities
 from lxml import etree
 from erleuchten.util.util import create_file_path
+from erleuchten.util.error import ErleuchtenException
+from erleuchten.util.error import ERRNO_XML_CANNOT_FIND_DISK
 
 
 class XML(object):
@@ -62,7 +64,20 @@ class VMXML(XML):
         for x in s:
             d = (x.xpath('target')[0].get("dev"))
             f = (x.xpath('source')[0].get("file"))
-            rtn_list.append([d, f])
+            t = (x.xpath('driver')[0].get("type"))
+            rtn_list.append([d, f, t])
+
+    def get_disk_device_info_by_dev(self, dev_name):
+        """通过设备路径名获取磁盘文件路径与磁盘文件格式"""
+        s = self.xml_obj.xpath('/domain/devices/disk'
+                               '[@device="disk"]/target[@dev="vda"]')
+        if len(s) != 1:
+            raise ErleuchtenException(ERRNO_XML_CANNOT_FIND_DISK)
+        x = s[0].getparent()
+        d = (x.xpath('target')[0].get("dev"))
+        f = (x.xpath('source')[0].get("file"))
+        t = (x.xpath('driver')[0].get("type"))
+        return (d, f, t)
 
 
 class ScriptConf(XML):
