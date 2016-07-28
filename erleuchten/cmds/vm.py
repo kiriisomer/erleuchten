@@ -77,13 +77,13 @@ def cmd_poweroff_domain(args):
 
 def cmd_list_domain(args):
     rtn = environment.list_domains(args.status)
-    print('\n'.join(rtn))
+    print ('\n'.join(rtn))
 
 
 def cmd_list_domain_disk(args):
     rtn = environment.list_domain_disk(args.name)
     for i in rtn:
-        print '{0} {1} {2}'.format(i[0], i[1], i[2])
+        print ('{0}  {1}  {2}'.format(i[0], i[1], i[2]))
 
 
 def cmd_attach(args):
@@ -96,5 +96,4 @@ def cmd_detach(args):
 
 
 def cmd_clone(args):
-    # environment.list_domain_disk(args.name)
-    pass
+    environment.clone_vm_by_domain_name(args.src_name, args.new_name)

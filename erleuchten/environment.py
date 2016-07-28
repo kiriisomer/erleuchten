@@ -2,12 +2,17 @@
 
 # prepare testing environment(vm, software, yeesan, etc.)
 import os
+from uuid import uuid4
 
 import StringIO
 import shutil
 import libvirt
+
 from erleuchten.util import conf
+from erleuchten.util.error import ErleuchtenException
+from erleuchten.util.error import Errno
 from erleuchten.util.xml import VMXML
+from erleuchten.util.util import copy_file
 
 HYPERVISOR_URI = "qemu:///system"
 DISK_XML = ("<disk type='file' device='disk'>"
@@ -48,10 +53,7 @@ def _list_active_domains():
 
 def _list_inactive_domains():
     conn = libvirt.open(HYPERVISOR_URI)
-    domains = []
-    for id_ in conn.listDefinedDomains():
-        domains.append(conn.lookupByID(id_).name())
-    return domains
+    return conn.listDefinedDomains()
 
 
 def poweron_domain_by_name(domain_name):
@@ -115,7 +117,7 @@ def list_domain_disk(domain_name):
     dom = conn.lookupByName(domain_name)
     xmldata = dom.XMLDesc(0)
     xml_obj = VMXML(StringIO.StringIO(xmldata))
-    return xml_obj.get_device_path_list()
+    return xml_obj.get_all_disk_device()
 
 
 def attach_disk(domain_name, src, tgt, fmt):
@@ -135,6 +137,37 @@ def detach_disk(domain_name, tgt):
 
     disk_xml = DISK_XML.format(source=src, target=tgt, format=fmt)
     dom.detachDevice(disk_xml)
+
+
+def clone_vm_by_domain_name(dom_name, new_dom_name):
+    if dom_name == new_dom_name:
+        raise ErleuchtenException(Errno.ERRNO_XML_DONAMIN_NAME_CONFLICT)
+    conn = libvirt.open(HYPERVISOR_URI)
+    dom = conn.lookupByName(dom_name)
+
+    # 获取原有的虚拟机xml
+    xmldata = dom.XMLDesc(0)
+    xml_obj = VMXML(StringIO.StringIO(xmldata))
+
+    # 修改xml属性
+    xml_obj.modify_vm_name(new_dom_name)
+    xml_obj.modify_vm_uuid(str(uuid4()))
+
+    dev_cnt = 0
+    for dev in xml_obj.get_all_disk_device():
+        orig_path, orig_name = os.path.split(dev[1])
+        l = orig_name.partition('.')
+
+        new_name = "".join(["%s_%04d" % (new_dom_name, dev_cnt), l[1], l[2]])
+        new_disk_path = os.path.join(orig_path, new_name)
+        xml_obj.modify_disk_file_path(dev[0], new_disk_path)
+        copy_file(dev[1], new_disk_path)
+        dev_cnt += 1
+
+    xml_obj.randomize_interface_mac()
+
+    # 获取新的xml文件，定义虚拟机
+    conn.defineXML(xml_obj.get_xml_str())
 
 
 # ##############################################################################

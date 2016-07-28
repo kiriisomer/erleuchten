@@ -2,9 +2,9 @@
 
 # xml utilities
 from lxml import etree
-from erleuchten.util.util import create_file_path
+from erleuchten.util.util import ramdom_mac_addr, create_file_path
 from erleuchten.util.error import ErleuchtenException
-from erleuchten.util.error import ERRNO_XML_CANNOT_FIND_DISK
+from erleuchten.util.error import Errno
 
 
 class XML(object):
@@ -37,6 +37,9 @@ class XML(object):
         """创建一个xml root对象，以往里面读写配置"""
         self.xml_root_obj = etree.Element("erleuchten")
 
+    def get_xml_str(self):
+        return etree.tostring(self.xml_root_obj, encoding='utf-8')
+
     def write_xml_conf(self, path=None):
         """将xml root对象写入指定文件"""
         if path is None:
@@ -57,9 +60,9 @@ class VMXML(XML):
         s = self.xml_root_obj.xpath('/domain/devices/disk/source')
         return [x.get('file') for x in s]
 
-    def get_all_device(self):
+    def get_all_disk_device(self):
         """获取设备 路径名与文件路径"""
-        s = self.xml_obj.xpath('/domain/devices/disk[@device="disk"]')
+        s = self.xml_root_obj.xpath('/domain/devices/disk[@device="disk"]')
         rtn_list = []
         for x in s:
             d = (x.xpath('target')[0].get("dev"))
@@ -67,17 +70,49 @@ class VMXML(XML):
             t = (x.xpath('driver')[0].get("type"))
             rtn_list.append([d, f, t])
 
+        return rtn_list
+
     def get_disk_device_info_by_dev(self, dev_name):
         """通过设备路径名获取磁盘文件路径与磁盘文件格式"""
-        s = self.xml_obj.xpath('/domain/devices/disk'
-                               '[@device="disk"]/target[@dev="vda"]')
+        s = self.xml_root_obj.xpath('/domain/devices/disk[@device="disk"]'
+                                    '/target[@dev="{dev}"]'
+                                    ''.format(dev=dev_name))
         if len(s) != 1:
-            raise ErleuchtenException(ERRNO_XML_CANNOT_FIND_DISK)
+            raise ErleuchtenException(Errno.ERRNO_XML_CANNOT_FIND_DISK)
         x = s[0].getparent()
         d = (x.xpath('target')[0].get("dev"))
         f = (x.xpath('source')[0].get("file"))
         t = (x.xpath('driver')[0].get("type"))
         return (d, f, t)
+
+    def modify_vm_name(self, new_name):
+        s = self.xml_root_obj.xpath('/domain/name')
+        if len(s) != 1:
+            raise ErleuchtenException(Errno.ERRNO_XML_CANNOT_FIND_DOMAIN_NAME)
+        s[0].text = new_name
+
+    def modify_vm_uuid(self, new_uuid):
+        s = self.xml_root_obj.xpath('/domain/uuid')
+        if len(s) != 1:
+            raise ErleuchtenException(Errno.ERRNO_XML_CANNOT_FIND_DOMAIN_UUID)
+        if new_uuid == s[0].text:
+            raise ErleuchtenException(Errno.ERRNO_XML_DONAMIN_UUID_CONFLICT)
+        s[0].text = new_uuid
+
+    def modify_disk_file_path(self, dev_name, new_file_path):
+        s = self.xml_root_obj.xpath('/domain/devices/disk[@device="disk"]'
+                                    '/target[@dev="{dev}"]'
+                                    ''.format(dev=dev_name))
+        if len(s) != 1:
+            raise ErleuchtenException(Errno.ERRNO_XML_CANNOT_FIND_DISK)
+        x = s[0].getparent().xpath('source')[0]
+        x.set("file", new_file_path)
+
+    def randomize_interface_mac(self):
+        """遍历interface mac元素，修改addr"""
+        s = self.xml_root_obj.xpath('/domain/devices/interface/mac')
+        for i in s:
+            i.set("address", ramdom_mac_addr())
 
 
 class ScriptConf(XML):
