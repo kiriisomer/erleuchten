@@ -250,3 +250,93 @@ class ScriptSetConf(XML):
         conf_dict["script_name_list"] = script_name_list
 
         return conf_dict
+
+
+class EnvConf(XML):
+    """对Script类的xml配置文件操作的封装。"""
+
+    def __init__(self, xml_path, name):
+        super(ScriptConf, self).__init__(xml_path)
+        self.name = name
+
+    def get_name(self):
+        if self.xml_root_obj is None:
+            return None
+        s = self.xml_root_obj.xpath(
+            '/erleuchten/env[@name="%s"]' % self.name)
+        try:
+            return s[0].get("name")
+        except:
+            return None
+
+    def save_config(self, conf_dict, write_file=True):
+        """将配置保存起来"""
+        # 没有root则新建一个
+        if self.xml_root_obj is None:
+            root = etree.Element("erleuchten")
+        else:
+            root = self.xml_root_obj
+
+        # 没有script则新建一个
+        result = root.xpath('/erleuchten/env[@name="%s"]' % self.name)
+        if len(result) == 0:
+            set_obj = etree.SubElement(root, "env")
+            set_obj.set('name', self.name)
+        else:
+            set_obj = result[0]
+
+        for i, j in conf_dict.items():
+            if i == 'vm_info_list':
+                # 使用子元素保存vm信息
+                for vm in set_obj.iterchildren():
+                    set_obj.remove(vm)
+                for vm in conf_dict[i]:
+                    r = etree.SubElement(set_obj, "vm")
+                    r.set('name', str(vm['name']))
+                    r.set('src_name', str(vm['src_name']))
+                    r.set('addr', str(vm['addr']))
+                    r.set('mask', str(vm['mask']))
+                    r.set('gateway', str(vm['gateway']))
+                    r.set('dns', str(vm['dns']))
+                    r.set('ssh_user', str(vm['ssh_user']))
+                    r.set('ssh_password', str(vm['ssh_password']))
+            else:
+                set_obj.set(str(i), str(j))
+
+        self.xml_root_obj = root
+        if write_file:
+            self.write_xml_conf()
+
+    def load_config(self):
+        """读取配置，返回一个字典"""
+        self.open_parser()
+        if self.xml_root_obj is None:
+            return {}
+
+        set_obj = self.xml_root_obj.xpath(
+            '/erleuchten/env[@name="%s"]' % self.name)
+        conf_dict = {}
+        conf_dict["status"] = set_obj[0].get("status")
+
+        vm_info_list = []
+        for s in set_obj[0].xpath('vm'):
+            vm = {}
+            vm['name'] = s.get('name')
+            vm['src_name'] = s.get('src_name')
+            vm['addr'] = s.get('addr')
+            vm['mask'] = s.get('mask')
+            vm['gateway'] = s.get('gateway')
+            vm['dns'] = s.get('dns')
+            vm['ssh_user'] = s.get('ssh_user')
+            vm['ssh_password'] = s.get('ssh_password')
+            vm_info_list.append(vm)
+
+        conf_dict["vm_info_list"] = vm_info_list
+        return conf_dict
+
+    def list_include_vm_name(self):
+        """列出包含的虚拟机的名字"""
+        s = self.xml_root_obj.xpath(
+            '/erleuchten/env[@name="%s"]/vm' % self.name)
+
+        return [x.get("name") for x in s]

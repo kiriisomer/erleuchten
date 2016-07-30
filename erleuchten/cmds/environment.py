@@ -16,9 +16,10 @@ def main():
     p_create.add_argument('--env_name', help='testcase env name', default=None)
     p_create.set_defaults(func=cmd_create)
 
-    p_set_vm = sub_parsers.add_parser('set-vm', help='set environment '
-                                      'including vm info')
+    p_set_vm = sub_parsers.add_parser('add-vm-desc', help='add a vm '
+                                      'description. vm will be created later')
     p_set_vm.add_argument('--name', help='environment name', required=True)
+    p_set_vm.add_argument('--vm-src-name', help='vm source name', required=True)
     p_set_vm.add_argument('--vm-name', help='vm name', required=True)
     p_set_vm.add_argument('--vm-addr', help='vm address', required=True)
     p_set_vm.add_argument('--vm-mask', help='vm mask', required=True)
@@ -45,7 +46,7 @@ def main():
     p_list_env.set_defaults(func=cmd_list)
 
     p_list_env_vm = sub_parsers.add_parser('list-vm', help='list environment '
-                                           'vm info')
+                                           'vm')
     p_list_env_vm.add_argument('--name', help='environment name',
                                required=True)
     p_list_env_vm.add_argument('--vm-name', help='environment name',
@@ -55,6 +56,18 @@ def main():
     p_remove = sub_parsers.add_parser('remove', help='remove a environment')
     p_remove.add_argument('--name', help='environment name', required=True)
     p_remove.set_defaults(func=cmd_remove)
+
+    p_remove = sub_parsers.add_parser('poweron', help='start all environment'
+                                      'vm')
+    p_remove.add_argument('--name', help='environment name', required=True)
+    p_remove.set_defaults(func=cmd_remove)
+
+    p_remove = sub_parsers.add_parser('poweroff', help='start all environment'
+                                      'vm')
+    p_remove.add_argument('--name', help='environment name', required=True)
+    p_remove.set_defaults(func=cmd_remove)
+
+
 
     args = main_parser.parse_args()
     args.func(args)

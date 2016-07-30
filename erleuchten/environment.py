@@ -11,12 +11,12 @@ import libvirt
 from erleuchten.util import conf
 from erleuchten.util.error import ErleuchtenException
 from erleuchten.util.error import Errno
-from erleuchten.util.xml import VMXML
+from erleuchten.util.xml import VMXML, EnvironmentConf
 from erleuchten.util.util import copy_file
 
 HYPERVISOR_URI = "qemu:///system"
 DISK_XML = ("<disk type='file' device='disk'>"
-            "<driver name='qemu' type='{format}' cache='none'/>"
+            "<driver name='qemu' type='{format}'/>"
             "<source file='{source}'/>"
             "<target dev='{target}' bus='virtio'/>"
             "</disk>")
@@ -173,9 +173,17 @@ def clone_vm_by_domain_name(dom_name, new_dom_name):
 # ##############################################################################
 #
 # ##############################################################################
-def env_create(name):
-    pass
+def create_env(name):
+    if os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+                                   "%s.conf" % name)):
+        # 已经存在了
+        print("{name} already existed".format(name))
+        return
 
+
+# ##############################################################################
+#
+# ##############################################################################
 # class VM(object):
 #     """single VM"""
 
@@ -192,13 +200,13 @@ def env_create(name):
 #         self.ssh_user_pswd = "111111"
 
 
-class VMTemplate(object):
+class VM(object):
     """VM template"""
 
     def __init__(self):
         self.name = ""
         self.xml_obj = None
-        self.status = VMTEMPLATE_STATUS_UNKNOWN
+        self.status = ENVVM_STATUS_UNKNOWN
         # self.device_path_dict = {}
 
     def initial(self, name):
@@ -248,7 +256,42 @@ class Environment(object):
 
     def __init__(self):
         self.name = ""
-        self.vm_info = {}   # {vm_name: vm_class}
+        self.vm_info = []   # [{}, {}]
+        self.conf_obj = None
+
+    def initial(self, name, ):
+        """初始化一个新的对象"""
+        self.name = name
+
+    def load_conf(self, name):
+        """打开配置文件，读取配置初始化"""
+        # 返回文件路径，使用sh执行
+        self.name = name
+        conf_obj = ScriptConf(os.path.join(conf.PATH_ENVIRONMENT, self.name,
+                                           "%s.conf" % self.name), self.name)
+        self.conf_obj = conf_obj
+        # 如果打开空文件，或记载名字错误，则无法继续下去
+        if conf_obj.xml_root_obj is None and conf_obj.get_name() is None:
+            return
+            # raise error.ScriptError(error.ERRNO_SCRIPT_OPENCONF_ERROR)
+        conf_dict = conf_obj.load_config()
+        self.script_name = conf_dict["script_name"]
+        self.pid = int(conf_dict["pid"])
+        self.exceed_time = int(conf_dict["exceed_time"])
+        self.status = conf_dict["status"]
+    def add_domain_desc(self, name, src_name, addr, mask, gateway, dns,
+                        ssh_user, ssh_password):
+        desc_dict = {
+            "name": "",
+            "src_name": "",
+            "addr": "",
+            "mask": "",
+            "gateway": "",
+            "dns": "",
+            "ssh_user": "",
+            "ssh_password": ""
+        }
+
 
     def create(self):
         """create an environment"""
