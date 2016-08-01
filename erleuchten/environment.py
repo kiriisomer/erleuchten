@@ -11,8 +11,8 @@ import libvirt
 from erleuchten.util import conf
 from erleuchten.util.error import ErleuchtenException
 from erleuchten.util.error import Errno
-from erleuchten.util.xml import VMXML, EnvironmentConf
-from erleuchten.util.util import copy_file
+from erleuchten.util.xml import VMXML, EnvConf
+from erleuchten.util.util import create_dir, copy_file
 
 HYPERVISOR_URI = "qemu:///system"
 DISK_XML = ("<disk type='file' device='disk'>"
@@ -22,9 +22,9 @@ DISK_XML = ("<disk type='file' device='disk'>"
             "</disk>")
 
 
-VMTEMPLATE_STATUS_UNKNOWN = 'unknown'
-VMTEMPLATE_STATUS_NORMAL = 'normal'
-VMTEMPLATE_STATUS_BAD = 'bad'
+ENV_STATUS_UNKNOWN = 'unknown'
+ENV_STATUS_NORMAL = 'normal'
+ENV_STATUS_BAD = 'bad'
 
 ENVVM_STATUS_UNKNOWN = 'unknown'    # 未知，未初始化
 ENVVM_STATUS_STOP = 'stop'          # 初始化完毕，正常停止状态，
@@ -180,75 +180,191 @@ def create_env(name):
         print("{name} already existed".format(name))
         return
 
+    env_obj = Environment()
+    env_obj.load_conf(name)
+
+    env_obj.initial(name)
+    env_obj.save_conf()
+
+
+def remove_env(name, force=False):
+    shutil.rmtree(os.path.join(conf.PATH_ENVIRONMENT, name))
+
+
+def env_add_domain(name, vm_info_dict):
+    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+                                       "%s.conf" % name)):
+        # script set不存在
+        print("environment not found")
+        return
+
+    env_obj = Environment()
+    env_obj.load_conf(name)
+    env_obj.add_domain_desc(vm_info_dict.get("name", ""),
+                            vm_info_dict.get("src_name", ""),
+                            vm_info_dict.get("addr", ""),
+                            vm_info_dict.get("mask", ""),
+                            vm_info_dict.get("gateway", ""),
+                            vm_info_dict.get("dns", ""),
+                            vm_info_dict.get("ssh_user", ""),
+                            vm_info_dict.get("ssh_password", ""))
+    env_obj.save_conf()
+
+
+def env_remove_domain(name, vm_name):
+    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+                                       "%s.conf" % name)):
+        # script set不存在
+        print("environment not found")
+        return
+
+    env_obj = Environment()
+    env_obj.load_conf(name)
+    env_obj.remove_domain_desc(vm_name)
+    env_obj.save_conf()
+
+
+def env_initial(name):
+    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+                                       "%s.conf" % name)):
+        # script set不存在
+        print("environment not found")
+        return
+
+    env_obj = Environment()
+    env_obj.load_conf(name)
+    env_obj.start_all_vm()
+
+
+def env_start(name):
+    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+                                       "%s.conf" % name)):
+        # script set不存在
+        print("environment not found")
+        return
+
+    env_obj = Environment()
+    env_obj.load_conf(name)
+    env_obj.start_all_vm()
+
+
+def env_shutdown(name):
+    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+                                       "%s.conf" % name)):
+        # script set不存在
+        print("environment not found")
+        return
+
+    env_obj = Environment()
+    env_obj.load_conf(name)
+    env_obj.shutdown_all_vm()
+
+
+def env_get_vm_list(name):
+    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+                                       "%s.conf" % name)):
+        # script set不存在
+        print("environment not found")
+        return
+
+    env_obj = Environment()
+    env_obj.load_conf(name)
+    return env_obj.get_vm_list()
+
+
+def env_get_vm_info(name, vm_name):
+    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+                                       "%s.conf" % name)):
+        # script set不存在
+        print("environment not found")
+        return
+
+    env_obj = Environment()
+    env_obj.load_conf(name)
+    return env_obj.get_vm_info(vm_name)
+
+
+def list_env():
+    if not os.path.exists(conf.PATH_ENVIRONMENT):
+        create_dir(conf.PATH_ENVIRONMENT)
+    result = []
+    for i in os.listdir(conf.PATH_ENVIRONMENT):
+        try:
+            if os.path.isfile(os.path.join(conf.PATH_ENVIRONMENT, i,
+                                           "%s.conf" % i)):
+                result.append(i)
+        except OSError:
+            continue
+
+    return result
+
 
 # ##############################################################################
 #
 # ##############################################################################
-# class VM(object):
-#     """single VM"""
-
-#     def __init__(self):
-#         self.name = ""
-#         self.env_name = ""
-#         self.order = -1
-#         self.status = ENVVM_STATUS_UNKNOWN
-#         self.ip = ""
-#         self.mask = ""
-#         self.gateway = ""
-#         self.dns = ""
-#         self.ssh_user = "root"
-#         self.ssh_user_pswd = "111111"
-
-
-class VM(object):
-    """VM template"""
+class EnvVM(object):
+    """虚拟机描述信息"""
 
     def __init__(self):
         self.name = ""
-        self.xml_obj = None
-        self.status = ENVVM_STATUS_UNKNOWN
-        # self.device_path_dict = {}
+        self.env_name = ""
+        self.ip = ""
+        self.mask = ""
+        self.gateway = ""
+        self.dns = ""
+        self.user = "root"
+        self.user_pswd = "111111"
 
-    def initial(self, name):
-        """init class by vm_template's name"""
-        self.name = name
-        xml_path = os.path.join(conf.PATH_VM_TEMPLATE, self.name,
-                                "%s.xml" % self.name)
-        self.xml_obj = VMXML(xml_path)
 
-        # self.device_path_dict = {}
+# class VM(object):
+#     """VM template"""
 
-    def cerate(self):
-        """add a template"""
-        self._create_from_local_xml()
+#     def __init__(self):
+#         self.name = ""
+#         self.xml_obj = None
+#         self.status = ENVVM_STATUS_UNKNOWN
+#         # self.device_path_dict = {}
 
-    def remove(self):
-        """remove a template from disk"""
-        # remove xml file and related disk img
-        for i in self.device_path_dict.values():
-            os.unlink(i)
-        os.unlink(self.xml_obj.xml_path)
+#     def initial(self, name):
+#         """init class by vm_template's name"""
+#         self.name = name
+#         xml_path = os.path.join(conf.PATH_VM_TEMPLATE, self.name,
+#                                 "%s.xml" % self.name)
+#         self.xml_obj = VMXML(xml_path)
 
-        # reset param
-        self.name = ""
-        self.status = VMTEMPLATE_STATUS_UNKNOWN
-        self.xml_obj = None
-        # self.device_path_dict = {}
+#         # self.device_path_dict = {}
 
-    def _create_from_local_xml(self, name, xml_path, move_dev_files=False):
-        """从XML描述文件创建一个模板。
-        将XML文件复制到自己的目录，指定了move_dev_files的话，连磁盘文件也
-        一并复制进来"""
-        self.name = name
-        new_xml_path = os.path.join(conf.PATH_VM_TEMPLATE, self.name,
-                                    "%s.xml" % self.name)
-        # 复制xml文件到目录中。
-        shutil.copy(xml_path, new_xml_path)
-        # if move_dev_files:
-        #     for i in self.xml.get_device_path_list():
+#     def cerate(self):
+#         """add a template"""
+#         self._create_from_local_xml()
 
-    def copy(self, src_obj):
-        """copy and create a new VMTemplate"""
+#     def remove(self):
+#         """remove a template from disk"""
+#         # remove xml file and related disk img
+#         for i in self.device_path_dict.values():
+#             os.unlink(i)
+#         os.unlink(self.xml_obj.xml_path)
+
+#         # reset param
+#         self.name = ""
+#         self.status = ENVVM_STATUS_UNKNOWN
+#         self.xml_obj = None
+#         # self.device_path_dict = {}
+
+#     def _create_from_local_xml(self, name, xml_path, move_dev_files=False):
+#         """从XML描述文件创建一个模板。
+#         将XML文件复制到自己的目录，指定了move_dev_files的话，连磁盘文件也
+#         一并复制进来"""
+#         self.name = name
+#         new_xml_path = os.path.join(conf.PATH_VM_TEMPLATE, self.name,
+#                                     "%s.xml" % self.name)
+#         # 复制xml文件到目录中。
+#         shutil.copy(xml_path, new_xml_path)
+#         # if move_dev_files:
+#         #     for i in self.xml.get_device_path_list():
+
+#     def copy(self, src_obj):
+#         """copy and create a new VMTemplate"""
 
 
 class Environment(object):
@@ -256,56 +372,84 @@ class Environment(object):
 
     def __init__(self):
         self.name = ""
-        self.vm_info = []   # [{}, {}]
+        self.vm_info_list = []   # [{}, {}]
+        self.status = ENV_STATUS_UNKNOWN
         self.conf_obj = None
 
-    def initial(self, name, ):
+    def initial(self, name):
         """初始化一个新的对象"""
         self.name = name
 
     def load_conf(self, name):
         """打开配置文件，读取配置初始化"""
-        # 返回文件路径，使用sh执行
         self.name = name
-        conf_obj = ScriptConf(os.path.join(conf.PATH_ENVIRONMENT, self.name,
-                                           "%s.conf" % self.name), self.name)
+        conf_obj = EnvConf(os.path.join(conf.PATH_ENVIRONMENT, self.name,
+                                        "%s.conf" % self.name), self.name)
         self.conf_obj = conf_obj
         # 如果打开空文件，或记载名字错误，则无法继续下去
         if conf_obj.xml_root_obj is None and conf_obj.get_name() is None:
             return
-            # raise error.ScriptError(error.ERRNO_SCRIPT_OPENCONF_ERROR)
+            # raise ErleuchtenException(Errno.ERRNO_OPENCONF_ERROR)
         conf_dict = conf_obj.load_config()
-        self.script_name = conf_dict["script_name"]
-        self.pid = int(conf_dict["pid"])
-        self.exceed_time = int(conf_dict["exceed_time"])
         self.status = conf_dict["status"]
+        self.vm_info_list = conf_dict["vm_info_list"]
+
+    def save_conf(self):
+        """保存配置到文件"""
+        if self.conf_obj is None:
+            raise ErleuchtenException(errno=Errno.ERRNO_SAVE_PATH_NOT_SPECIFY)
+        conf_dict = {
+            "name": self.name,
+            "status": self.status,
+            "vm_info_list": self.vm_info_list
+        }
+        self.conf_obj.save_config(conf_dict)
+
     def add_domain_desc(self, name, src_name, addr, mask, gateway, dns,
                         ssh_user, ssh_password):
+        """添加一个虚拟机描述"""
+        # 检查是否已经添加过
+        if name in [x['name'] for x in self.vm_info]:
+            return
+
         desc_dict = {
-            "name": "",
-            "src_name": "",
-            "addr": "",
-            "mask": "",
-            "gateway": "",
-            "dns": "",
-            "ssh_user": "",
-            "ssh_password": ""
+            "name": name,
+            "src_name": src_name,
+            "addr": addr,
+            "mask": mask,
+            "gateway": gateway,
+            "dns": dns,
+            "ssh_user": ssh_user,
+            "ssh_password": ssh_password
         }
+        self.vm_info.append(desc_dict)
 
+    def initial_all_vm(self):
+        """initial env VMs"""
+        for i in self.vm_info:
+            clone_vm_by_domain_name(i["src_name"], i["name"])
 
+    def start_all_vm(self):
+        """poweron env VMs"""
+        for i in self.vm_info:
+            poweron_domain_by_name(i["name"])
 
+    def shutdown_all_vm(self):
+        """shutdown env VMs"""
+        for i in self.vm_info:
+            destroy_domain_by_name(i["name"])
 
-    def create(self):
-        """create an environment"""
+    def remove_domain_desc(self, name):
+        """remove VM from environment"""
+        for i in len(range(self.vm_info)):
+            if self.vm_info[i]["name"] == name:
+                del self.vm_info[i]
+                break
 
-    def initial_VM(self):
-        """create an env, initial VMs"""
+    def get_vm_list(self):
+        return [x['name'] for x in self.vm_info]
 
-    def launch(self):
-        """poweron env's VMs"""
-
-    def shutdown(self):
-        """shutdown env's VMs"""
-
-    def remove_VM(self):
-        """remove VM from disk and environment"""
+    def get_vm_info(self, name):
+        for i in self.vm_info:
+            if i["name"] == name:
+                return i

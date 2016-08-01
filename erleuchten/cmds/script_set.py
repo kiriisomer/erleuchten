@@ -43,20 +43,21 @@ def main():
 
 
 def cmd_create(args):
-    return script.create_script_set(args.name, args.script_list)
+    script.create_script_set(args.name, args.script_list)
 
 
 def cmd_set_script(args):
-    return script.set_script_set(args.name, args.script_list)
+    script.set_script_set(args.name, args.script_list)
 
 
 def cmd_remove(args):
-    return script.remove_script_set(args.name, args.force)
+    script.remove_script_set(args.name, args.force)
 
 
 def cmd_run(args):
-    return script.run_script_set(args.name)
+    script.run_script_set(args.name)
 
 
 def cmd_list(args):
-    return script.list_script_set()
+    result = script.list_script_set()
+    print '\n'.join(result)

@@ -71,13 +71,18 @@ def run_script(name):
 
 
 def list_script():
-    try:
-        for i in os.listdir(conf.PATH_SCRIPT):
+    if not os.path.exists(conf.PATH_SCRIPT):
+        create_dir(conf.PATH_SCRIPT)
+    result = []
+    for i in os.listdir(conf.PATH_SCRIPT):
+        try:
             if os.path.isfile(os.path.join(conf.PATH_SCRIPT, i,
                                            "%s.conf" % i)):
-                print i
-    except OSError:
-        pass
+                result.append(i)
+        except OSError:
+            continue
+
+    return result
 
 
 # ==============================================================================
@@ -133,13 +138,18 @@ def run_script_set(name):
 
 
 def list_script_set():
-    try:
-        for i in os.listdir(conf.PATH_SCRIPT_SET):
+    if not os.path.exists(conf.PATH_SCRIPT_SET):
+        create_dir(conf.PATH_SCRIPT_SET)
+    result = []
+    for i in os.listdir(conf.PATH_SCRIPT_SET):
+        try:
             if os.path.isfile(os.path.join(conf.PATH_SCRIPT_SET, i,
                                            "%s.conf" % i)):
-                print i
-    except OSError:
-        pass
+                result.append(i)
+        except OSError:
+            continue
+
+    return result
 
 
 # ==============================================================================
@@ -215,7 +225,6 @@ class Script(object):
         # 如果打开空文件，或记载名字错误，则无法继续下去
         if conf_obj.xml_root_obj is None and conf_obj.get_name() is None:
             return
-            # raise error.ScriptError(error.ERRNO_SCRIPT_OPENCONF_ERROR)
         conf_dict = conf_obj.load_config()
         self.script_name = conf_dict["script_name"]
         self.pid = int(conf_dict["pid"])
@@ -251,6 +260,7 @@ class ScriptSet(object):
         self.script_name_list = []
         self.return_code_list = []
         self.status = SCRIPT_SET_STATUS_UNKNOWN
+        self.conf_obj = None
 
     def initial(self, name, script_name_list=None):
         """初始化一个新的对象"""
@@ -270,7 +280,7 @@ class ScriptSet(object):
         self.conf_obj = conf_obj
         # 如果打开空文件，或记载名字错误，则无法继续下去
         if conf_obj is None and conf_obj.get_name() is None:
-            raise error.ScriptError(error.ERRNO_SCRIPT_OPENCONF_ERROR)
+            return
         conf_dict = conf_obj.load_config()
         self.script_name_list = conf_dict.get("script_name_list", [])
         self.return_code_list = conf_dict.get("return_code_list", [])

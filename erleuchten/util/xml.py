@@ -256,7 +256,7 @@ class EnvConf(XML):
     """对Script类的xml配置文件操作的封装。"""
 
     def __init__(self, xml_path, name):
-        super(ScriptConf, self).__init__(xml_path)
+        super(EnvConf, self).__init__(xml_path)
         self.name = name
 
     def get_name(self):

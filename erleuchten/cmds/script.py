@@ -36,16 +36,17 @@ def main():
 
 
 def cmd_create(args):
-    return script.create_script(args.name, args.script_path)
+    script.create_script(args.name, args.script_path)
 
 
 def cmd_remove(args):
-    return script.remove_script(args.name)
+    script.remove_script(args.name)
 
 
 def cmd_run(args):
-    return script.run_script(args.name)
+    script.run_script(args.name)
 
 
 def cmd_list(args):
-    return script.list_script()
+    result = script.list_script()
+    print '\n'.join(result)
