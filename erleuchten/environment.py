@@ -305,15 +305,28 @@ def list_env():
 class EnvVM(object):
     """虚拟机描述信息"""
 
-    def __init__(self):
-        self.name = ""
-        self.env_name = ""
-        self.ip = ""
-        self.mask = ""
-        self.gateway = ""
-        self.dns = ""
-        self.user = "root"
-        self.user_pswd = "111111"
+    def __init__(self, desc_dict):
+        self.name = desc_dict["name"]
+        self.env_name = desc_dict["env_name"]
+        self.ip = desc_dict["ip"]
+        self.mask = desc_dict["mask"]
+        self.gateway = desc_dict["gateway"]
+        self.dns = desc_dict["dns"]
+        self.ssh_user = desc_dict["ssh_user"]
+        self.ssh_password = desc_dict["ssh_password"]
+
+    def __getitem__(self, key):
+        if hasattr(self, key):
+            return getattr(self, key)
+        else:
+            raise KeyError(key)
+
+    def __setitem__(self, key, val):
+        if hasattr(self, key):
+            return setattr(self, key, val)
+        else:
+            raise KeyError('object EnvVM is not a Dict, '
+                           'cannot set item "%s"' % key)
 
 
 # class VM(object):
