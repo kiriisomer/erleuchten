@@ -15,6 +15,9 @@ def main():
     p_create.add_argument('--name', help='script name', required=True)
     p_create.add_argument('--script-path', dest="script_path",
                           help='script storage path', required=True)
+    p_create.add_argument('--appendix-path', dest="appendix_path", nargs='+',
+                          help='script appendix file or res storage path',
+                          default=[])
     p_create.set_defaults(func=cmd_create)
 
     p_remove = sub_parsers.add_parser('remove', help='remove a script')
@@ -36,7 +39,7 @@ def main():
 
 
 def cmd_create(args):
-    script.create_script(args.name, args.script_path)
+    script.create_script(args.name, args.script_path, args.appendix_path)
 
 
 def cmd_remove(args):

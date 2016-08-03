@@ -8,7 +8,7 @@ import StringIO
 import shutil
 import libvirt
 
-from erleuchten.util import conf
+from erleuchten.util import conf, remote
 from erleuchten.util.error import ErleuchtenException
 from erleuchten.util.error import Errno
 from erleuchten.util.xml import VMXML, EnvConf
@@ -194,7 +194,6 @@ def remove_env(name, force=False):
 def env_add_domain(name, vm_info_dict):
     if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
                                        "%s.conf" % name)):
-        # script set不存在
         print("environment not found")
         return
 
@@ -202,6 +201,7 @@ def env_add_domain(name, vm_info_dict):
     env_obj.load_conf(name)
     env_obj.add_domain_desc(vm_info_dict.get("name", ""),
                             vm_info_dict.get("src_name", ""),
+                            vm_info_dict.get("if_name", ""),
                             vm_info_dict.get("addr", ""),
                             vm_info_dict.get("mask", ""),
                             vm_info_dict.get("gateway", ""),
@@ -211,10 +211,29 @@ def env_add_domain(name, vm_info_dict):
     env_obj.save_conf()
 
 
+def env_modify_domain(name, vm_info_dict):
+    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+                                       "%s.conf" % name)):
+        print("environment not found")
+        return
+
+    env_obj = Environment()
+    env_obj.load_conf(name)
+    env_obj.modify_domain_desc(vm_info_dict.get("name", ""),
+                               vm_info_dict.get("src_name", ""),
+                               vm_info_dict.get("if_name", ""),
+                               vm_info_dict.get("addr", ""),
+                               vm_info_dict.get("mask", ""),
+                               vm_info_dict.get("gateway", ""),
+                               vm_info_dict.get("dns", ""),
+                               vm_info_dict.get("ssh_user", ""),
+                               vm_info_dict.get("ssh_password", ""))
+    env_obj.save_conf()
+
+
 def env_remove_domain(name, vm_name):
     if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
                                        "%s.conf" % name)):
-        # script set不存在
         print("environment not found")
         return
 
@@ -227,7 +246,6 @@ def env_remove_domain(name, vm_name):
 def env_initial(name):
     if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
                                        "%s.conf" % name)):
-        # script set不存在
         print("environment not found")
         return
 
@@ -239,7 +257,6 @@ def env_initial(name):
 def env_start(name):
     if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
                                        "%s.conf" % name)):
-        # script set不存在
         print("environment not found")
         return
 
@@ -251,7 +268,6 @@ def env_start(name):
 def env_shutdown(name):
     if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
                                        "%s.conf" % name)):
-        # script set不存在
         print("environment not found")
         return
 
@@ -263,7 +279,6 @@ def env_shutdown(name):
 def env_get_vm_list(name):
     if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
                                        "%s.conf" % name)):
-        # script set不存在
         print("environment not found")
         return
 
@@ -275,7 +290,6 @@ def env_get_vm_list(name):
 def env_get_vm_info(name, vm_name):
     if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
                                        "%s.conf" % name)):
-        # script set不存在
         print("environment not found")
         return
 
@@ -297,6 +311,39 @@ def list_env():
             continue
 
     return result
+
+
+def env_ssh_cmd(name, vm_name, cmd):
+    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+                                       "%s.conf" % name)):
+        print("environment not found")
+        return
+
+    env_obj = Environment()
+    env_obj.load_conf(name)
+    return env_obj.remote_cmd(vm_name, cmd)
+
+
+def env_ssh_put(name, vm_name, src, dst):
+    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+                                       "%s.conf" % name)):
+        print("environment not found")
+        return
+
+    env_obj = Environment()
+    env_obj.load_conf(name)
+    return env_obj.remote_put(vm_name, src, dst)
+
+
+def env_ssh_get(name, vm_name, src, dst):
+    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+                                       "%s.conf" % name)):
+        print("environment not found")
+        return
+
+    env_obj = Environment()
+    env_obj.load_conf(name)
+    return env_obj.remote_get(vm_name, src, dst)
 
 
 # ##############################################################################
@@ -327,6 +374,18 @@ class EnvVM(object):
         else:
             raise KeyError('object EnvVM is not a Dict, '
                            'cannot set item "%s"' % key)
+
+    def ssh_process_cmd(self, cmd):
+        return remote.fabric_command(self.ip, self.ssh_user,
+                                     self.ssh_password, cmd)
+
+    def ssh_put(self, local_src, remote_dst):
+        return remote.fabric_command(self.ip, self.ssh_user,
+                                     self.ssh_password, local_src, remote_dst)
+
+    def ssh_get(self, local_src, remote_dst):
+        return remote.fabric_command(self.ip, self.ssh_user,
+                                     self.ssh_password, local_src, remote_dst)
 
 
 # class VM(object):
@@ -418,16 +477,17 @@ class Environment(object):
         }
         self.conf_obj.save_config(conf_dict)
 
-    def add_domain_desc(self, name, src_name, addr, mask, gateway, dns,
-                        ssh_user, ssh_password):
+    def add_domain_desc(self, name, src_name, if_name, addr, mask, gateway,
+                        dns, ssh_user, ssh_password):
         """添加一个虚拟机描述"""
         # 检查是否已经添加过
-        if name in [x['name'] for x in self.vm_info]:
+        if name in [x['name'] for x in self.vm_info_list]:
             return
 
         desc_dict = {
             "name": name,
             "src_name": src_name,
+            "if_name": if_name,
             "addr": addr,
             "mask": mask,
             "gateway": gateway,
@@ -435,34 +495,87 @@ class Environment(object):
             "ssh_user": ssh_user,
             "ssh_password": ssh_password
         }
-        self.vm_info.append(desc_dict)
+        self.vm_info_list.append(desc_dict)
+
+    def modify_domain_desc(self, name, src_name, if_name, addr, mask, gateway,
+                           dns, ssh_user, ssh_password):
+        """添加一个虚拟机描述"""
+        desc_dict = {}
+        if name is not None:
+            desc_dict["name"] = name
+        if src_name is not None:
+            desc_dict["src_name"] = src_name
+        if if_name is not None:
+            desc_dict["if_name"] = if_name
+        if addr is not None:
+            desc_dict["addr"] = addr
+        if mask is not None:
+            desc_dict["mask"] = mask
+        if gateway is not None:
+            desc_dict["gateway"] = gateway
+        if dns is not None:
+            desc_dict["dns"] = dns
+        if ssh_user is not None:
+            desc_dict["ssh_user"] = ssh_user
+        if ssh_password is not None:
+            desc_dict["ssh_password"] = ssh_password
+
+        for i in range(len(self.vm_info_list)):
+            if self.vm_info_list[i]["name"] == name:
+                self.vm_info_list[i].update(desc_dict)
+                return
+        raise ErleuchtenException(errno=Errno.ERRNO_CANNOT_FIND_VM_IN_ENV)
 
     def initial_all_vm(self):
         """initial env VMs"""
-        for i in self.vm_info:
+        for i in self.vm_info_list:
             clone_vm_by_domain_name(i["src_name"], i["name"])
 
     def start_all_vm(self):
         """poweron env VMs"""
-        for i in self.vm_info:
+        for i in self.vm_info_list:
             poweron_domain_by_name(i["name"])
 
     def shutdown_all_vm(self):
         """shutdown env VMs"""
-        for i in self.vm_info:
+        for i in self.vm_info_list:
             destroy_domain_by_name(i["name"])
 
-    def remove_domain_desc(self, name):
+    def remove_domain_desc(self, vm_name):
         """remove VM from environment"""
-        for i in len(range(self.vm_info)):
-            if self.vm_info[i]["name"] == name:
-                del self.vm_info[i]
+        for i in range(len(self.vm_info_list)):
+            if self.vm_info_list[i]["name"] == vm_name:
+                del self.vm_info_list[i]
                 break
 
     def get_vm_list(self):
-        return [x['name'] for x in self.vm_info]
+        return [x['name'] for x in self.vm_info_list]
 
-    def get_vm_info(self, name):
-        for i in self.vm_info:
-            if i["name"] == name:
+    def get_vm_info(self, vm_name):
+        for i in self.vm_info_list:
+            if i["name"] == vm_name:
                 return i
+        raise ErleuchtenException(errno=Errno.ERRNO_CANNOT_FIND_VM_IN_ENV)
+
+    def remote_cmd(self, vm_name, cmd):
+        for i in self.vm_info_list:
+            if i["name"] == vm_name:
+                return remote.fabric_command(i["addr"], i["ssh_user"],
+                                             i["ssh_password"], cmd)
+        raise ErleuchtenException(errno=Errno.ERRNO_CANNOT_FIND_VM_IN_ENV)
+
+    def remote_put(self, vm_name, local_src, remote_dst):
+        for i in self.vm_info_list:
+            if i["name"] == vm_name:
+                return remote.fabric_command(i["addr"], i["ssh_user"],
+                                             i["ssh_password"],  local_src,
+                                             remote_dst)
+        raise ErleuchtenException(errno=Errno.ERRNO_CANNOT_FIND_VM_IN_ENV)
+
+    def remote_get(self, vm_name, remote_src, local_dst):
+        for i in self.vm_info_list:
+            if i["name"] == vm_name:
+                return remote.fabric_command(i["addr"], i["ssh_user"],
+                                             i["ssh_password"], remote_src,
+                                             local_dst)
+        raise ErleuchtenException(errno=Errno.ERRNO_CANNOT_FIND_VM_IN_ENV)

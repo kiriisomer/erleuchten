@@ -294,6 +294,7 @@ class EnvConf(XML):
                     r = etree.SubElement(set_obj, "vm")
                     r.set('name', str(vm['name']))
                     r.set('src_name', str(vm['src_name']))
+                    r.set('if_name', str(vm['if_name']))
                     r.set('addr', str(vm['addr']))
                     r.set('mask', str(vm['mask']))
                     r.set('gateway', str(vm['gateway']))
@@ -323,6 +324,7 @@ class EnvConf(XML):
             vm = {}
             vm['name'] = s.get('name')
             vm['src_name'] = s.get('src_name')
+            vm['if_name'] = s.get('if_name')
             vm['addr'] = s.get('addr')
             vm['mask'] = s.get('mask')
             vm['gateway'] = s.get('gateway')

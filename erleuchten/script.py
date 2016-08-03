@@ -10,11 +10,9 @@ import subprocess
 import shutil
 
 from erleuchten.util import conf
-from erleuchten.util import error
 from erleuchten.util.xml import ScriptConf, ScriptSetConf
 from erleuchten.util.util import create_dir
-from erleuchten.util.error import ErleuchtenException
-from erleuchten.util.error import ERRNO_SAVE_PATH_NOT_SPECIFY
+from erleuchten.util.error import Errno, ErleuchtenException
 
 
 SCRIPT_STATUS_UNKNOWN = 'UNKNOWN'
@@ -34,7 +32,7 @@ class CommandTimeoutError(Exception):
 # ==============================================================================
 #
 # ==============================================================================
-def create_script(name, script_name):
+def create_script(name, script_name, appendix_path=[]):
     if os.path.exists(os.path.join(conf.PATH_SCRIPT, name, "%s.conf" % name)):
         # 已经存在了
         print("{name} already existed".format(name))
@@ -43,7 +41,7 @@ def create_script(name, script_name):
     script_obj = Script()
     script_obj.load_conf(name)
 
-    script_obj.initial(name, script_name)
+    script_obj.initial(name, script_name, appendix_path)
     script_obj.save_conf()
 
 
@@ -63,11 +61,8 @@ def run_script(name):
         print("script not found")
         return
 
-    if script_obj.status == SCRIPT_STATUS_STOP:
-        rtn_code = script_obj.run()
-        print(rtn_code)
-    else:
-        print("script status is not STOP")
+    rtn_code = script_obj.run()
+    print(rtn_code)
 
 
 def list_script():
@@ -130,11 +125,8 @@ def run_script_set(name):
     script_set_obj = ScriptSet()
     script_set_obj.load_conf(name)
 
-    if script_set_obj.status == SCRIPT_SET_STATUS_STOP:
-        rtn_list = script_set_obj.run()
-        print '\n'.join(rtn_list)
-    else:
-        print("script status is not STOP")
+    rtn_list = script_set_obj.run()
+    print '\n'.join(rtn_list)
 
 
 def list_script_set():
@@ -166,17 +158,19 @@ class Script(object):
     def __init__(self):
         self.name = ""
         self.script_name = ""
+        self.appendix = []
         self.pid = -1
         self.exceed_time = 0    # 超时时间
-        self.status = SCRIPT_STATUS_UNKNOWN
         self.stdout = None
         self.conf_obj = None
 
-    def initial(self, name, script_name, exceed_time=0, stdout=None):
+    def initial(self, name, script_name, appendix_path=[],
+                exceed_time=0, stdout=None):
         """初始化一个新的对象"""
         self.name = name
         self.set_script(script_name)
-        self.status = SCRIPT_STATUS_STOP
+        self.set_appendix(appendix_path)
+        # self.status = SCRIPT_STATUS_STOP
         self.exceed_time = exceed_time
         self.stdout = stdout
 
@@ -185,12 +179,22 @@ class Script(object):
 
     def set_script(self, script_name):
         """将脚本复制进来"""
-        self.script_name = script_name
+        create_dir(os.path.join(conf.PATH_SCRIPT, self.name))
         filename = os.path.split(script_name)[1]
         new_path_name = os.path.join(conf.PATH_SCRIPT, self.name, filename)
-        create_dir(os.path.join(conf.PATH_SCRIPT, self.name))
         shutil.copy(script_name, new_path_name)
         self.script_name = new_path_name
+
+    def set_appendix(self, appendix_path_list):
+        """将附加文件也复制进来, 与脚本放在一起"""
+        create_dir(os.path.join(conf.PATH_SCRIPT, self.name))
+        for appendix_file in appendix_path_list:
+            if not os.path.isfile(i):
+                raise ErleuchtenException(
+                    errno=Errno.ERRNO_APPENDIX_ONLY_SUPPORT_FILE)
+            filename = os.path.split(appendix_file)[1]
+            new_path_name = os.path.join(conf.PATH_SCRIPT, self.name, filename)
+            shutil.copy(appendix_file, new_path_name)
 
     def run(self, stdout=None):
         """run script
@@ -200,6 +204,8 @@ class Script(object):
         signal.signal(signal.SIGALRM, timeout_handler)
         batch = os.path.join(conf.PATH_SCRIPT, self.name, self.script_name)
         cmd_list = [conf.SHELL_EXECUTOR, batch]
+        orig_cwd = os.getcwd()
+        os.chdir(os.path.join(conf.PATH_SCRIPT, self.name))
         try:
             signal.alarm(self.exceed_time)
             p = subprocess.Popen(cmd_list, stdout=self.stdout)
@@ -211,9 +217,8 @@ class Script(object):
         except CommandTimeoutError:
             p.kill()
             return "TimeExceed"
-
-    def check_exist(self):
-        """"""
+        finally:
+            os.chdir(orig_cwd)
 
     def load_conf(self, name):
         """打开配置文件，读取配置初始化"""
@@ -229,18 +234,16 @@ class Script(object):
         self.script_name = conf_dict["script_name"]
         self.pid = int(conf_dict["pid"])
         self.exceed_time = int(conf_dict["exceed_time"])
-        self.status = conf_dict["status"]
 
     def save_conf(self):
         """保存配置到文件"""
         if self.conf_obj is None:
-            raise ErleuchtenException(errno=ERRNO_SAVE_PATH_NOT_SPECIFY)
+            raise ErleuchtenException(errno=Errno.ERRNO_SAVE_PATH_NOT_SPECIFY)
         conf_dict = {
             "name": self.name,
             "script_name": self.script_name,
             "pid": self.pid,
             "exceed_time": self.exceed_time,
-            "status": self.status,
         }
         self.conf_obj.save_config(conf_dict)
 
@@ -259,7 +262,6 @@ class ScriptSet(object):
         self.script_obj_list = []
         self.script_name_list = []
         self.return_code_list = []
-        self.status = SCRIPT_SET_STATUS_UNKNOWN
         self.conf_obj = None
 
     def initial(self, name, script_name_list=None):
@@ -267,7 +269,6 @@ class ScriptSet(object):
         self.name = name
         if script_name_list is not None:
             self.set_script(script_name_list)
-        self.status = SCRIPT_SET_STATUS_STOP
 
     def load_conf(self, name):
         """打开配置文件，读取配置初始化"""
@@ -284,17 +285,15 @@ class ScriptSet(object):
         conf_dict = conf_obj.load_config()
         self.script_name_list = conf_dict.get("script_name_list", [])
         self.return_code_list = conf_dict.get("return_code_list", [])
-        self.status = conf_dict.get("status")
 
     def save_conf(self):
         """保存配置到文件"""
         if self.conf_obj is None:
-            raise ErleuchtenException(errno=ERRNO_SAVE_PATH_NOT_SPECIFY)
+            raise ErleuchtenException(errno=Errno.ERRNO_SAVE_PATH_NOT_SPECIFY)
         conf_dict = {
             "name": self.name,
             "script_name_list": self.script_name_list,
             "return_code_list": self.return_code_list,
-            "status": self.status,
         }
         self.conf_obj.save_config(conf_dict)
 

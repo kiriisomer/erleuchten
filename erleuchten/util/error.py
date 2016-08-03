@@ -8,6 +8,9 @@ class Errno:
 
     ERRNO_OPENCONF_ERROR = 1001
     ERRNO_SAVE_PATH_NOT_SPECIFY = 1002
+    ERRNO_CANNOT_FIND_VM_IN_ENV = 1003
+    ERRNO_APPENDIX_ONLY_SUPPORT_FILE = 1004
+
 
     ERRNO_XML_CANNOT_FIND_DISK = 2001
     ERRNO_XML_CANNOT_FIND_INTERFACE = 2002
@@ -19,24 +22,13 @@ class Errno:
 
 class ErleuchtenException(Exception):
 
-    def __init__(self, errno=Errno.ERRNO_UNKNOWN_ERROR, msg=""):
+    def __init__(self, errno=Errno.ERRNO_UNKNOWN_ERROR, other_msg=""):
         self.errno = errno
-        self.msg = msg
+        self.other_msg = other_msg
 
-    def __repr__(self):
+    def __str__(self):
         return self.errno
 
-
-class TestcaseError(ErleuchtenException):
-    pass
-
-
-class ScriptError(ErleuchtenException):
-    pass
-
-
-class CommandTimeoutError(Exception):
-    pass
 
 
 class FileLockException(Exception):
