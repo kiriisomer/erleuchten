@@ -291,7 +291,7 @@ def env_get_vm_info(name, vm_name):
     if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
                                        "%s.conf" % name)):
         print("environment not found")
-        return
+        return {}
 
     env_obj = Environment()
     env_obj.load_conf(name)
@@ -534,12 +534,24 @@ class Environment(object):
     def start_all_vm(self):
         """poweron env VMs"""
         for i in self.vm_info_list:
-            poweron_domain_by_name(i["name"])
+            try:
+                poweron_domain_by_name(i["name"])
+            except libvirt.libvirtError, e:
+                if e.err[0] == libvirt.VIR_ERR_OPERATION_INVALID:
+                    # domain is already running
+                    continue
+                raise
 
     def shutdown_all_vm(self):
         """shutdown env VMs"""
         for i in self.vm_info_list:
-            destroy_domain_by_name(i["name"])
+            try:
+                destroy_domain_by_name(i["name"])
+            except libvirt.libvirtError, e:
+                if e.err[0] == libvirt.VIR_ERR_OPERATION_INVALID:
+                    # domain is not running
+                    continue
+                raise
 
     def remove_domain_desc(self, vm_name):
         """remove VM from environment"""

@@ -63,13 +63,15 @@ def main():
     p_set_vm = sub_parsers.add_parser('delete-vm', help='delete environment '
                                       'including vm')
     p_set_vm.add_argument('--name', help='environment name', required=True)
-    p_set_vm.add_argument('--vm_name', help='environment name', required=True)
+    p_set_vm.add_argument('--vm-name', help='vm name', required=True,
+                          dest='vm_name')
     p_set_vm.set_defaults(func=cmd_delete_vm)
 
     p_info_vm = sub_parsers.add_parser('vm-info', help='get environment '
                                        'including vm info')
     p_info_vm.add_argument('--name', help='environment name', required=True)
-    p_info_vm.add_argument('--vm_name', help='environment name', required=True)
+    p_info_vm.add_argument('--vm-name', help='vm name', required=True,
+                           dest='vm_name')
     p_info_vm.set_defaults(func=cmd_vm_info)
 
     p_list_env = sub_parsers.add_parser('list', help='list all environment')
@@ -91,39 +93,39 @@ def main():
                            'through ssh', required=True)
     p_ssh_cmd.set_defaults(func=cmd_process_ssh_cmd)
 
-    p_ssh_cmd = sub_parsers.add_parser('sshput', help='put file to vm, '
+    p_ssh_put = sub_parsers.add_parser('sshput', help='put file to vm, '
                                        'using ssh')
-    p_ssh_cmd.add_argument('--name', help='environment name',
+    p_ssh_put.add_argument('--name', help='environment name',
                            required=True)
-    p_ssh_cmd.add_argument('--vm-name', help='environment name',
+    p_ssh_put.add_argument('--vm-name', help='environment name',
                            dest='vm_name', required=True)
-    p_ssh_cmd.add_argument('--src', help='local file path', required=True)
-    p_ssh_cmd.add_argument('--dst', help='remote file storage path',
+    p_ssh_put.add_argument('--src', help='local file path', required=True)
+    p_ssh_put.add_argument('--dst', help='remote file storage path',
                            required=True)
-    p_ssh_cmd.set_defaults(func=cmd_ssh_put)
+    p_ssh_put.set_defaults(func=cmd_ssh_put)
 
-    p_ssh_cmd = sub_parsers.add_parser('sshget', help='get file from vm,'
+    p_ssh_get = sub_parsers.add_parser('sshget', help='get file from vm,'
                                        'using ssh')
-    p_ssh_cmd.add_argument('--name', help='environment name',
+    p_ssh_get.add_argument('--name', help='environment name',
                            required=True)
-    p_ssh_cmd.add_argument('--vm-name', help='environment name',
+    p_ssh_get.add_argument('--vm-name', help='environment name',
                            dest='vm_name', required=True)
-    p_ssh_cmd.add_argument('--src', help='remote file path', required=True)
-    p_ssh_cmd.add_argument('--dst', help='local file storage path',
+    p_ssh_get.add_argument('--src', help='remote file path', required=True)
+    p_ssh_get.add_argument('--dst', help='local file storage path',
                            required=True)
-    p_ssh_cmd.set_defaults(func=cmd_ssh_get)
+    p_ssh_get.set_defaults(func=cmd_ssh_get)
 
     p_remove = sub_parsers.add_parser('remove', help='remove a environment')
     p_remove.add_argument('--name', help='environment name', required=True)
     p_remove.set_defaults(func=cmd_remove)
 
-    p_remove = sub_parsers.add_parser('start', help='start all environment vm')
-    p_remove.add_argument('--name', help='environment name', required=True)
-    p_remove.set_defaults(func=cmd_start)
+    p_start = sub_parsers.add_parser('start', help='start all environment vm')
+    p_start.add_argument('--name', help='environment name', required=True)
+    p_start.set_defaults(func=cmd_start)
 
-    p_remove = sub_parsers.add_parser('stop', help='stop all environment vm')
-    p_remove.add_argument('--name', help='environment name', required=True)
-    p_remove.set_defaults(func=cmd_stop)
+    p_stop = sub_parsers.add_parser('stop', help='stop all environment vm')
+    p_stop.add_argument('--name', help='environment name', required=True)
+    p_stop.set_defaults(func=cmd_stop)
 
     args = main_parser.parse_args()
     args.func(args)
@@ -168,7 +170,9 @@ def cmd_delete_vm(args):
 
 
 def cmd_vm_info(args):
-    environment.env_get_vm_info(args.name, args.vm_name)
+    result = environment.env_get_vm_info(args.name, args.vm_name)
+    for i, j in result.items():
+        print '%s  %s' % (i, j)
 
 
 def cmd_list(args):

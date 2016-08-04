@@ -189,14 +189,14 @@ class Script(object):
         """将附加文件也复制进来, 与脚本放在一起"""
         create_dir(os.path.join(conf.PATH_SCRIPT, self.name))
         for appendix_file in appendix_path_list:
-            if not os.path.isfile(i):
+            if not os.path.isfile(appendix_file):
                 raise ErleuchtenException(
                     errno=Errno.ERRNO_APPENDIX_ONLY_SUPPORT_FILE)
             filename = os.path.split(appendix_file)[1]
             new_path_name = os.path.join(conf.PATH_SCRIPT, self.name, filename)
             shutil.copy(appendix_file, new_path_name)
 
-    def run(self, stdout=None):
+    def run(self, stdout=None, append_env={}):
         """run script
         根据不同的情况会返回不同类型的值(None，数字，字符串)"""
         if stdout is not None:
@@ -205,10 +205,12 @@ class Script(object):
         batch = os.path.join(conf.PATH_SCRIPT, self.name, self.script_name)
         cmd_list = [conf.SHELL_EXECUTOR, batch]
         orig_cwd = os.getcwd()
+        s_env = os.environ.copy()
+        s_env.update(append_env)
         os.chdir(os.path.join(conf.PATH_SCRIPT, self.name))
         try:
             signal.alarm(self.exceed_time)
-            p = subprocess.Popen(cmd_list, stdout=self.stdout)
+            p = subprocess.Popen(cmd_list, stdout=self.stdout, env=s_env)
             self.pid = p.pid
             p.wait()
             exit_code = p.returncode
@@ -317,16 +319,20 @@ class ScriptSet(object):
                        "will ignore it" % script_name)
         self.script_obj_list = script_obj_list
 
-    def run(self):
+    def run(self, stdout=None, append_env={}):
         """run scripts"""
         self.load_script()
-        f_stdout = open(os.path.join(conf.PATH_SCRIPT_SET, self.name,
-                                     "%s.out" % self.name), 'a+', 0)
+
+        if stdout is not None:
+            f_stdout = stdout
+        else:
+            f_stdout = open(os.path.join(conf.PATH_SCRIPT_SET, self.name,
+                                         "%s.out" % self.name), 'a+', 0)
         return_code_list = []
         for ts in self.script_obj_list:
             if isinstance(ts, Script):
                 try:
-                    exit_code = ts.run(stdout=f_stdout)
+                    exit_code = ts.run(stdout=f_stdout, append_env=append_env)
                     return_code_list.append(str(exit_code))
                 except:
                     return_code_list.append("UnexpectedException")
