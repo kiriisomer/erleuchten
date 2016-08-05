@@ -74,6 +74,11 @@ def main():
                            dest='vm_name')
     p_info_vm.set_defaults(func=cmd_vm_info)
 
+    p_init_vm = sub_parsers.add_parser('vm-init', help='get environment '
+                                       'including vm info')
+    p_init_vm.add_argument('--name', help='environment name', required=True)
+    p_init_vm.set_defaults(func=cmd_vm_init_all)
+
     p_list_env = sub_parsers.add_parser('list', help='list all environment')
     p_list_env.set_defaults(func=cmd_list)
 
@@ -187,6 +192,10 @@ def cmd_list_vm(args):
 
 def cmd_remove(args):
     environment.remove_env(args.name)
+
+
+def cmd_vm_init_all(args):
+    environment.env_initial(args.name)
 
 
 def cmd_start(args):

@@ -33,7 +33,7 @@ def fabric_put(addr, user, password, src, dst):
     api.env.hosts = [host]
     api.env.passwords = {host: password}
 
-    result = api.execute(_put_file, src=src, dst=dst)
+    result = api.execute(_put_file, local_src=src, remote_dst=dst)
     return result.get(host, 3)
 
 
@@ -42,5 +42,5 @@ def fabric_get(addr, user, password, src, dst):
     api.env.hosts = [host]
     api.env.passwords = {host: password}
 
-    result = api.execute(_get_file, src=src, dst=dst)
+    result = api.execute(_get_file, remote_src=src, local_dst=dst)
     return result.get(host, 3)

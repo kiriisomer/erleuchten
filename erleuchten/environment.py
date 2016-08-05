@@ -251,7 +251,7 @@ def env_initial(name):
 
     env_obj = Environment()
     env_obj.load_conf(name)
-    env_obj.start_all_vm()
+    env_obj.initial_all_vm()
 
 
 def env_start(name):
@@ -579,15 +579,15 @@ class Environment(object):
     def remote_put(self, vm_name, local_src, remote_dst):
         for i in self.vm_info_list:
             if i["name"] == vm_name:
-                return remote.fabric_command(i["addr"], i["ssh_user"],
-                                             i["ssh_password"],  local_src,
-                                             remote_dst)
+                return remote.fabric_put(i["addr"], i["ssh_user"],
+                                         i["ssh_password"],  local_src,
+                                         remote_dst)
         raise ErleuchtenException(errno=Errno.ERRNO_CANNOT_FIND_VM_IN_ENV)
 
     def remote_get(self, vm_name, remote_src, local_dst):
         for i in self.vm_info_list:
             if i["name"] == vm_name:
-                return remote.fabric_command(i["addr"], i["ssh_user"],
-                                             i["ssh_password"], remote_src,
-                                             local_dst)
+                return remote.fabric_get(i["addr"], i["ssh_user"],
+                                         i["ssh_password"], remote_src,
+                                         local_dst)
         raise ErleuchtenException(errno=Errno.ERRNO_CANNOT_FIND_VM_IN_ENV)
