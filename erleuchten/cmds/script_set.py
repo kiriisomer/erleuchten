@@ -21,7 +21,7 @@ def main():
                                    help='set script set including scripts')
     p_set.add_argument('--name', help='script set name', required=True)
     p_set.add_argument('--script-name', dest="script_list", nargs="+",
-                       help='include script(s) name with order')
+                       help='include script(s) name with order', required=True)
     p_set.set_defaults(func=cmd_set_script)
 
     p_remove = sub_parsers.add_parser('remove', help='remove a script set')

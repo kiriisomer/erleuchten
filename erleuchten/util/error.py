@@ -11,13 +11,14 @@ class Errno:
     ERRNO_CANNOT_FIND_VM_IN_ENV = 1003
     ERRNO_APPENDIX_ONLY_SUPPORT_FILE = 1004
 
-
     ERRNO_XML_CANNOT_FIND_DISK = 2001
     ERRNO_XML_CANNOT_FIND_INTERFACE = 2002
     ERRNO_XML_CANNOT_FIND_DOMAIN_NAME = 2003
     ERRNO_XML_CANNOT_FIND_DOMAIN_UUID = 2004
     ERRNO_XML_DONAMIN_UUID_CONFLICT = 2005
     ERRNO_XML_DONAMIN_NAME_CONFLICT = 2006
+
+    ERROR_UTIL_ACQUIRE_LOCK_FAILED = 3001
 
 
 class ErleuchtenException(Exception):
@@ -28,7 +29,6 @@ class ErleuchtenException(Exception):
 
     def __str__(self):
         return self.errno
-
 
 
 class FileLockException(Exception):

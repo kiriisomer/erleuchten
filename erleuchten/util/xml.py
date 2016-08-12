@@ -2,7 +2,8 @@
 
 # xml utilities
 from lxml import etree
-from erleuchten.util.util import ramdom_mac_addr, create_file_path
+from erleuchten.util.util import ramdom_mac_addr, create_file_path, \
+    make_file_lock
 from erleuchten.util.error import ErleuchtenException
 from erleuchten.util.error import Errno
 
@@ -46,10 +47,11 @@ class XML(object):
             path = self.xml_path
         create_file_path(self.xml_path)
         with open(path, 'w+') as fp:
-            fp.write('''<?xml version="1.0" encoding="UTF-8"?>''')
-            fp.write('\n')
-            fp.write(etree.tostring(self.xml_root_obj, encoding='utf-8',
-                                    with_tail=True))
+            with make_file_lock(fp):
+                fp.write('''<?xml version="1.0" encoding="UTF-8"?>''')
+                fp.write('\n')
+                fp.write(etree.tostring(self.xml_root_obj, encoding='utf-8',
+                                        with_tail=True))
 
 
 class VMXML(XML):

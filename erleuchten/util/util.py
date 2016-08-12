@@ -1,13 +1,41 @@
 # coding:utf-8
 
 
-import errno
+import errno as sys_errno
 import os
 import stat
 import random
 import shutil
+import fcntl
+
+from contextlib import contextmanager
+
+from erleuchten.util.error import ErleuchtenException
+from erleuchten.util.error import Errno
 
 _DEFAULT_MODE = stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO
+
+
+def lock_fp(fp):
+    try:
+        fcntl.flock(fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except IOError:
+        raise ErleuchtenException(Errno.ERROR_UTIL_ACQUIRE_LOCK_FAILED)
+
+
+def unlock_fp(fp):
+    fcntl.flock(fp, fcntl.LOCK_UN)
+
+
+@contextmanager
+def make_file_lock(fp):
+    lock_fp(fp)
+    try:
+        yield
+    except RuntimeError:
+        raise
+    finally:
+        unlock_fp(fp)
 
 
 def ramdom_mac_addr(orig_mac_list=[]):
@@ -34,7 +62,7 @@ def create_dir(path, mode=_DEFAULT_MODE):
     try:
         os.makedirs(path, mode)
     except OSError as exc:
-        if exc.errno == errno.EEXIST:
+        if exc.errno == sys_errno.EEXIST:
             if not os.path.isdir(path):
                 raise
         else:
@@ -51,7 +79,7 @@ def delete_if_exists(path, remove=os.unlink):
     try:
         remove(path)
     except OSError as e:
-        if e.errno != errno.ENOENT:
+        if e.errno != sys_errno.ENOENT:
             raise
 
 

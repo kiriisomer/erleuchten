@@ -174,7 +174,7 @@ def clone_vm_by_domain_name(dom_name, new_dom_name):
 #
 # ##############################################################################
 def create_env(name):
-    if os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+    if os.path.exists(os.path.join(conf.get('PATH_ENVIRONMENT'), name,
                                    "%s.conf" % name)):
         # 已经存在了
         print("{name} already existed".format(name))
@@ -188,11 +188,11 @@ def create_env(name):
 
 
 def remove_env(name, force=False):
-    shutil.rmtree(os.path.join(conf.PATH_ENVIRONMENT, name))
+    shutil.rmtree(os.path.join(conf.get('PATH_ENVIRONMENT'), name))
 
 
 def env_add_domain(name, vm_info_dict):
-    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+    if not os.path.exists(os.path.join(conf.get('PATH_ENVIRONMENT'), name,
                                        "%s.conf" % name)):
         print("environment not found")
         return
@@ -212,7 +212,7 @@ def env_add_domain(name, vm_info_dict):
 
 
 def env_modify_domain(name, vm_info_dict):
-    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+    if not os.path.exists(os.path.join(conf.get('PATH_ENVIRONMENT'), name,
                                        "%s.conf" % name)):
         print("environment not found")
         return
@@ -232,7 +232,7 @@ def env_modify_domain(name, vm_info_dict):
 
 
 def env_remove_domain(name, vm_name):
-    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+    if not os.path.exists(os.path.join(conf.get('PATH_ENVIRONMENT'), name,
                                        "%s.conf" % name)):
         print("environment not found")
         return
@@ -244,7 +244,7 @@ def env_remove_domain(name, vm_name):
 
 
 def env_initial(name):
-    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+    if not os.path.exists(os.path.join(conf.get('PATH_ENVIRONMENT'), name,
                                        "%s.conf" % name)):
         print("environment not found")
         return
@@ -255,7 +255,7 @@ def env_initial(name):
 
 
 def env_start(name):
-    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+    if not os.path.exists(os.path.join(conf.get('PATH_ENVIRONMENT'), name,
                                        "%s.conf" % name)):
         print("environment not found")
         return
@@ -266,7 +266,7 @@ def env_start(name):
 
 
 def env_shutdown(name):
-    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+    if not os.path.exists(os.path.join(conf.get('PATH_ENVIRONMENT'), name,
                                        "%s.conf" % name)):
         print("environment not found")
         return
@@ -277,7 +277,7 @@ def env_shutdown(name):
 
 
 def env_get_vm_list(name):
-    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+    if not os.path.exists(os.path.join(conf.get('PATH_ENVIRONMENT'), name,
                                        "%s.conf" % name)):
         print("environment not found")
         return
@@ -288,7 +288,7 @@ def env_get_vm_list(name):
 
 
 def env_get_vm_info(name, vm_name):
-    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+    if not os.path.exists(os.path.join(conf.get('PATH_ENVIRONMENT'), name,
                                        "%s.conf" % name)):
         print("environment not found")
         return {}
@@ -299,12 +299,12 @@ def env_get_vm_info(name, vm_name):
 
 
 def list_env():
-    if not os.path.exists(conf.PATH_ENVIRONMENT):
-        create_dir(conf.PATH_ENVIRONMENT)
+    if not os.path.exists(conf.get('PATH_ENVIRONMENT')):
+        create_dir(conf.get('PATH_ENVIRONMENT'))
     result = []
-    for i in os.listdir(conf.PATH_ENVIRONMENT):
+    for i in os.listdir(conf.get('PATH_ENVIRONMENT')):
         try:
-            if os.path.isfile(os.path.join(conf.PATH_ENVIRONMENT, i,
+            if os.path.isfile(os.path.join(conf.get('PATH_ENVIRONMENT'), i,
                                            "%s.conf" % i)):
                 result.append(i)
         except OSError:
@@ -314,7 +314,7 @@ def list_env():
 
 
 def env_ssh_cmd(name, vm_name, cmd):
-    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+    if not os.path.exists(os.path.join(conf.get('PATH_ENVIRONMENT'), name,
                                        "%s.conf" % name)):
         print("environment not found")
         return
@@ -325,7 +325,7 @@ def env_ssh_cmd(name, vm_name, cmd):
 
 
 def env_ssh_put(name, vm_name, src, dst):
-    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+    if not os.path.exists(os.path.join(conf.get('PATH_ENVIRONMENT'), name,
                                        "%s.conf" % name)):
         print("environment not found")
         return
@@ -336,7 +336,7 @@ def env_ssh_put(name, vm_name, src, dst):
 
 
 def env_ssh_get(name, vm_name, src, dst):
-    if not os.path.exists(os.path.join(conf.PATH_ENVIRONMENT, name,
+    if not os.path.exists(os.path.join(conf.get('PATH_ENVIRONMENT'), name,
                                        "%s.conf" % name)):
         print("environment not found")
         return
@@ -455,8 +455,9 @@ class Environment(object):
     def load_conf(self, name):
         """打开配置文件，读取配置初始化"""
         self.name = name
-        conf_obj = EnvConf(os.path.join(conf.PATH_ENVIRONMENT, self.name,
-                                        "%s.conf" % self.name), self.name)
+        conf_obj = EnvConf(os.path.join(conf.get('PATH_ENVIRONMENT'),
+                                        self.name, "%s.conf" % self.name),
+                           self.name)
         self.conf_obj = conf_obj
         # 如果打开空文件，或记载名字错误，则无法继续下去
         if conf_obj.xml_root_obj is None and conf_obj.get_name() is None:

@@ -33,7 +33,8 @@ class CommandTimeoutError(Exception):
 #
 # ==============================================================================
 def create_script(name, script_name, appendix_path=[]):
-    if os.path.exists(os.path.join(conf.PATH_SCRIPT, name, "%s.conf" % name)):
+    if os.path.exists(os.path.join(conf.get("PATH_SCRIPT"), name,
+                                   "%s.conf" % name)):
         # 已经存在了
         print("{name} already existed".format(name))
         return
@@ -51,7 +52,7 @@ def remove_script(name):
     if script_obj.script_name != "":
         # 存在,可以删掉
         del script_obj
-        shutil.rmtree(os.path.join(conf.PATH_SCRIPT, name))
+        shutil.rmtree(os.path.join(conf.get("PATH_SCRIPT"), name))
 
 
 def run_script(name):
@@ -66,12 +67,12 @@ def run_script(name):
 
 
 def list_script():
-    if not os.path.exists(conf.PATH_SCRIPT):
-        create_dir(conf.PATH_SCRIPT)
+    if not os.path.exists(conf.get("PATH_SCRIPT")):
+        create_dir(conf.get("PATH_SCRIPT"))
     result = []
-    for i in os.listdir(conf.PATH_SCRIPT):
+    for i in os.listdir(conf.get("PATH_SCRIPT")):
         try:
-            if os.path.isfile(os.path.join(conf.PATH_SCRIPT, i,
+            if os.path.isfile(os.path.join(conf.get("PATH_SCRIPT"), i,
                                            "%s.conf" % i)):
                 result.append(i)
         except OSError:
@@ -84,7 +85,7 @@ def list_script():
 #
 # ==============================================================================
 def create_script_set(name, script_names):
-    if os.path.exists(os.path.join(conf.PATH_SCRIPT_SET, name,
+    if os.path.exists(os.path.join(conf.get("PATH_SCRIPT_SET"), name,
                                    "%s.conf" % name)):
         # 已经存在了
         print("name already existed")
@@ -98,7 +99,7 @@ def create_script_set(name, script_names):
 
 
 def set_script_set(name, script_names):
-    if not os.path.exists(os.path.join(conf.PATH_SCRIPT_SET, name,
+    if not os.path.exists(os.path.join(conf.get("PATH_SCRIPT_SET"), name,
                                        "%s.conf" % name)):
         # script set不存在
         print("script set not found")
@@ -112,11 +113,11 @@ def set_script_set(name, script_names):
 
 
 def remove_script_set(name, force=False):
-    shutil.rmtree(os.path.join(conf.PATH_SCRIPT_SET, name))
+    shutil.rmtree(os.path.join(conf.get("PATH_SCRIPT_SET"), name))
 
 
 def run_script_set(name):
-    if not os.path.exists(os.path.join(conf.PATH_SCRIPT_SET, name,
+    if not os.path.exists(os.path.join(conf.get("PATH_SCRIPT_SET"), name,
                                        "%s.conf" % name)):
         # script set不存在
         print("script set not found")
@@ -130,12 +131,12 @@ def run_script_set(name):
 
 
 def list_script_set():
-    if not os.path.exists(conf.PATH_SCRIPT_SET):
-        create_dir(conf.PATH_SCRIPT_SET)
+    if not os.path.exists(conf.get("PATH_SCRIPT_SET")):
+        create_dir(conf.get("PATH_SCRIPT_SET"))
     result = []
-    for i in os.listdir(conf.PATH_SCRIPT_SET):
+    for i in os.listdir(conf.get("PATH_SCRIPT_SET")):
         try:
-            if os.path.isfile(os.path.join(conf.PATH_SCRIPT_SET, i,
+            if os.path.isfile(os.path.join(conf.get("PATH_SCRIPT_SET"), i,
                                            "%s.conf" % i)):
                 result.append(i)
         except OSError:
@@ -179,21 +180,23 @@ class Script(object):
 
     def set_script(self, script_name):
         """将脚本复制进来"""
-        create_dir(os.path.join(conf.PATH_SCRIPT, self.name))
+        create_dir(os.path.join(conf.get("PATH_SCRIPT"), self.name))
         filename = os.path.split(script_name)[1]
-        new_path_name = os.path.join(conf.PATH_SCRIPT, self.name, filename)
+        new_path_name = os.path.join(conf.get("PATH_SCRIPT"), self.name,
+                                     filename)
         shutil.copy(script_name, new_path_name)
         self.script_name = new_path_name
 
     def set_appendix(self, appendix_path_list):
         """将附加文件也复制进来, 与脚本放在一起"""
-        create_dir(os.path.join(conf.PATH_SCRIPT, self.name))
+        create_dir(os.path.join(conf.get("PATH_SCRIPT"), self.name))
         for appendix_file in appendix_path_list:
             if not os.path.isfile(appendix_file):
                 raise ErleuchtenException(
                     errno=Errno.ERRNO_APPENDIX_ONLY_SUPPORT_FILE)
             filename = os.path.split(appendix_file)[1]
-            new_path_name = os.path.join(conf.PATH_SCRIPT, self.name, filename)
+            new_path_name = os.path.join(conf.get("PATH_SCRIPT"), self.name,
+                                         filename)
             shutil.copy(appendix_file, new_path_name)
 
     def run(self, stdout=None, append_env={}):
@@ -202,12 +205,13 @@ class Script(object):
         if stdout is not None:
             self.stdout = stdout
         signal.signal(signal.SIGALRM, timeout_handler)
-        batch = os.path.join(conf.PATH_SCRIPT, self.name, self.script_name)
+        batch = os.path.join(conf.get("PATH_SCRIPT"), self.name,
+                             self.script_name)
         cmd_list = [conf.SHELL_EXECUTOR, batch]
         orig_cwd = os.getcwd()
         s_env = os.environ.copy()
         s_env.update(append_env)
-        os.chdir(os.path.join(conf.PATH_SCRIPT, self.name))
+        os.chdir(os.path.join(conf.get("PATH_SCRIPT"), self.name))
         try:
             signal.alarm(self.exceed_time)
             p = subprocess.Popen(cmd_list, stdout=self.stdout, env=s_env)
@@ -226,7 +230,7 @@ class Script(object):
         """打开配置文件，读取配置初始化"""
         # 返回文件路径，使用sh执行
         self.name = name
-        conf_obj = ScriptConf(os.path.join(conf.PATH_SCRIPT, self.name,
+        conf_obj = ScriptConf(os.path.join(conf.get("PATH_SCRIPT"), self.name,
                                            "%s.conf" % self.name), self.name)
         self.conf_obj = conf_obj
         # 如果打开空文件，或记载名字错误，则无法继续下去
@@ -276,7 +280,7 @@ class ScriptSet(object):
         """打开配置文件，读取配置初始化"""
         self.name = name
         # 返回文件路径，使用sh执行
-        conf_obj = ScriptSetConf(os.path.join(conf.PATH_SCRIPT_SET,
+        conf_obj = ScriptSetConf(os.path.join(conf.get("PATH_SCRIPT_SET"),
                                               self.name,
                                               "%s.conf" % self.name),
                                  self.name)
@@ -326,8 +330,9 @@ class ScriptSet(object):
         if stdout is not None:
             f_stdout = stdout
         else:
-            f_stdout = open(os.path.join(conf.PATH_SCRIPT_SET, self.name,
-                                         "%s.out" % self.name), 'a+', 0)
+            f_stdout = open(os.path.join(conf.get("PATH_SCRIPT_SET"),
+                                         self.name, "%s.out" % self.name),
+                            'a+', 0)
         return_code_list = []
         for ts in self.script_obj_list:
             if isinstance(ts, Script):
