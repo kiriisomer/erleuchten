@@ -29,6 +29,11 @@ class CommandTimeoutError(Exception):
     pass
 
 
+class CommandTerminateError(Exception):
+    """执行命令专用异常，用于捕捉收到的强制关闭命令"""
+    pass
+
+
 # ==============================================================================
 #
 # ==============================================================================
@@ -153,14 +158,20 @@ def timeout_handler(signum, frame):
     raise CommandTimeoutError
 
 
+def terminate_handler(signum, frame):
+    """SIGTERM注册函数"""
+    raise CommandTerminateError
+
+
 class Script(object):
     """single test script"""
 
     def __init__(self):
-        self.name = ""
-        self.script_name = ""
-        self.appendix = []
-        self.pid = -1
+        self.name = ""          # 类名
+        self.script_name = ""   # 脚本文件名
+        self.appendix = []      # 附加文件列表
+        self.pid = -1           # 后台执行时的PID
+        self.return_state = ""  # 脚本执行返回状态
         self.exceed_time = 0    # 超时时间
         self.stdout = None
         self.conf_obj = None
@@ -199,6 +210,21 @@ class Script(object):
                                          filename)
             shutil.copy(appendix_file, new_path_name)
 
+    # def run(self, stdout=None, append_env={}, wait=True):
+    #     """run script"""
+
+    def run_bg(self, stdout=None, append_env={}):
+        """use os.fork to run program background
+        使用fork在后台运行脚本。"""
+
+        pid = os.fork()
+
+        if pid == 0:
+            return self.run(self, stdout, append_env)
+        else:
+            # 后台执行的话，返回PID给程序
+            return pid
+
     def run(self, stdout=None, append_env={}):
         """run script
         根据不同的情况会返回不同类型的值(None，数字，字符串)"""
@@ -211,6 +237,7 @@ class Script(object):
         orig_cwd = os.getcwd()
         s_env = os.environ.copy()
         s_env.update(append_env)
+        # 改变工作目录
         os.chdir(os.path.join(conf.get("PATH_SCRIPT"), self.name))
         try:
             signal.alarm(self.exceed_time)
@@ -221,9 +248,16 @@ class Script(object):
             signal.alarm(0)
             return exit_code
         except CommandTimeoutError:
+            # 超时杀掉任务
             p.kill()
             return "TimeExceed"
+        except CommandTerminateError:
+            # 被终止杀掉任务
+            p.kill()
+            return "Terminated"
+
         finally:
+            # 还原工作目录
             os.chdir(orig_cwd)
 
     def load_conf(self, name):

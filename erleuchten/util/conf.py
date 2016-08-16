@@ -29,7 +29,8 @@ def get(attribute):
     """获取参数"""
     global _global_config
     if _global_config is None:
-        _global_config = default_conf.update(load_config(PATH_CONFIG_FILE))
+        _global_config = default_conf
+        _global_config.update(load_config(PATH_CONFIG_FILE))
     return _global_config[attribute]
 
 

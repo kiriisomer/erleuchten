@@ -8,14 +8,13 @@ from erleuchten.script import ScriptSet
 from erleucthen.util.error import TestcaseError
 
 
-def check_name_exist(test_name):
-    """"""
-
-
-def create(args):
+def create(name, env_name=None, init_scriptset=None, test_scriptset=[]):
     """创建一个测试用例"""
     t = Testcase()
     t.initial(args.name)
+
+
+def modify(name, env_name=None, init_scriptset=None, test_scriptset=[]):
 
 
 def remove(args):
