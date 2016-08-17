@@ -215,14 +215,30 @@ class ScriptSetConf(XML):
         else:
             set_obj = result[0]
 
+        # 创建一个script_prop元素保存特定用于脚本的属性
+        result = root.xpath('/erleuchten/script_prop')
+        if len(result) == 0:
+            prop_obj = etree.SubElement(root, "script_prop")
+        else:
+            prop_obj = result[0]
+
         for i, j in conf_dict.items():
             if i == 'script_name_list':
                 # 使用子元素保存script
-                for k in set_obj.iterchildren():
+                for k in set_obj.xpath("script"):
                     set_obj.remove(k)
                 for m in conf_dict[i]:
                     s = etree.SubElement(set_obj, "script")
                     s.set('name', str(m))
+            elif i == 'script_prop_dict':
+                # 使用子元素保存script prop
+                for k in prop_obj.xpath("script"):
+                    prop_obj.remove(k)
+                for n, p in conf_dict[i].items():
+                    s = etree.SubElement(prop_obj, "script")
+                    s.set('name', str(n))
+                    for x, y in p.items():
+                        s.set(str(x), str(y))
             elif i == 'return_code_list':
                 # 使用空格分隔的字符串保存返回代码
                 set_obj.set(str(i), ' '.join([str(x) for x in j]))
@@ -239,17 +255,34 @@ class ScriptSetConf(XML):
         if self.xml_root_obj is None:
             return {}
 
-        set_obj = self.xml_root_obj.xpath(
-            '/erleuchten/scriptset[@name="%s"]' % self.name)
         conf_dict = {}
-        conf_dict["return_code_list"] = [
-            x for x in set_obj[0].get("return_code_list").split()]
-        conf_dict["status"] = set_obj[0].get("status")
+        result = self.xml_root_obj.xpath(
+            '/erleuchten/scriptset[@name="%s"]' % self.name)
+        if len(result) > 0:
+            set_obj = result[0]
+            conf_dict["return_code_list"] = [
+                x for x in set_obj.get("return_code_list").split()]
+            conf_dict["status"] = set_obj.get("status")
 
-        script_name_list = []
-        for s in set_obj[0].xpath('script'):
-            script_name_list.append(s.get("name"))
-        conf_dict["script_name_list"] = script_name_list
+            script_name_list = []
+            for s in set_obj.xpath('script'):
+                script_name_list.append(s.get("name"))
+            conf_dict["script_name_list"] = script_name_list
+
+        result = self.xml_root_obj.xpath('/erleuchten/script_prop')
+        if len(result) > 0:
+            prop_obj = result[0]
+            temp_dict_1 = {}
+            for i in prop_obj.xpath('script'):
+                temp_dict_2 = {}
+                name = i.get("name")
+                for j, k in i.items():
+                    if j == "name":
+                        continue
+                    temp_dict_2[j] = k
+                temp_dict_1[name] = temp_dict_2
+
+            conf_dict["script_prop_dict"] = temp_dict_1
 
         return conf_dict
 

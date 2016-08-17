@@ -231,6 +231,7 @@ class Script(object):
         if stdout is not None:
             self.stdout = stdout
         signal.signal(signal.SIGALRM, timeout_handler)
+        signal.signal(signal.SIGTERM, terminate_handler)
         batch = os.path.join(conf.get("PATH_SCRIPT"), self.name,
                              self.script_name)
         cmd_list = [conf.SHELL_EXECUTOR, batch]
@@ -299,9 +300,10 @@ class ScriptSet(object):
 
     def __init__(self):
         self.name = ""
-        self.script_obj_list = []
-        self.script_name_list = []
-        self.return_code_list = []
+        self.script_obj_list = []       # Script对象列表
+        self.script_name_list = []      # 包含的Script名字列表
+        self.script_prop_dict = {}      # script属性列表，{name:{prop1:val,},}
+        self.return_code_list = []      # 返回值列表
         self.conf_obj = None
 
     def initial(self, name, script_name_list=None):
@@ -334,6 +336,7 @@ class ScriptSet(object):
             "name": self.name,
             "script_name_list": self.script_name_list,
             "return_code_list": self.return_code_list,
+            "script_prop_dict": self.script_prop_dict,
         }
         self.conf_obj.save_config(conf_dict)
 
@@ -342,6 +345,13 @@ class ScriptSet(object):
         if not isinstance(script_name_list, (list, tuple)):
             return
         self.script_name_list = list(script_name_list)
+
+    def set_script_prop(self, script_name, property_dict):
+        """设置脚本集中脚本的属性，可设置
+        background:1   允许后台执行"""
+        d = self.script_prop_dict.get(script_name, {})
+        d.update(property_dict)
+        self.script_prop_dict[script_name] = d
 
     def load_script(self):
         """从script name读取script信息出来"""
@@ -364,15 +374,25 @@ class ScriptSet(object):
         if stdout is not None:
             f_stdout = stdout
         else:
+            # 没有指定stdout的话，定义一个文件，写在test set配置文件目录下
             f_stdout = open(os.path.join(conf.get("PATH_SCRIPT_SET"),
                                          self.name, "%s.out" % self.name),
                             'a+', 0)
         return_code_list = []
         for ts in self.script_obj_list:
             if isinstance(ts, Script):
+                # 获取脚本属性
+                d = self.script_prop_dict.get(ts.name, {})
+                bg_run = d.get("background", 0)
+                # 运行脚本
                 try:
-                    exit_code = ts.run(stdout=f_stdout, append_env=append_env)
-                    return_code_list.append(str(exit_code))
+                    if bg_run:
+                        ts.run_bg(stdout=f_stdout, append_env=append_env)
+                        return_code_list.append("BackgroundRunning")
+                    else:
+                        exit_code = ts.run(stdout=f_stdout,
+                                           append_env=append_env)
+                        return_code_list.append(str(exit_code))
                 except:
                     return_code_list.append("UnexpectedException")
             else:
