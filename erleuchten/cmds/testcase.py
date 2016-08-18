@@ -69,7 +69,7 @@ def cmd_modify(args):
 
 
 def cmd_init(args):
-    testcase.init(args.name)
+    testcase.init_env(args.name)
 
 
 def cmd_start(args):

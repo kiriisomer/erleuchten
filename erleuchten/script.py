@@ -23,6 +23,12 @@ SCRIPT_SET_STATUS_UNKNOWN = 'UNKNOWN'
 SCRIPT_SET_STATUS_STOP = 'STOP'         # 停止状态，随时可以执行
 SCRIPT_SET_STATUS_RUNNING = 'RUNNING'   # 运行状态
 
+SCRIPT_RESULT_SUCCEED = 'succeed'   # 脚本运行成功
+SCRIPT_RESULT_BG_RUNNING = 'background_running'   # 脚本后台运行
+SCRIPT_RESULT_NOT_A_SCRIPT = 'not a script'         # 加入了错误的脚本
+SCRIPT_RESULT_ERROR_RETURNED = 'error_code_returned'    # 返回了非零的错误码
+SCRIPT_RESULT_EXC_OCCUR = 'exception occured'    # 运行时候出现了异常
+
 
 class CommandTimeoutError(Exception):
     """执行命令专用异常，用于捕捉超时"""
@@ -93,7 +99,7 @@ def create_script_set(name, script_names):
     if os.path.exists(os.path.join(conf.get("PATH_SCRIPT_SET"), name,
                                    "%s.conf" % name)):
         # 已经存在了
-        print("name already existed")
+        print("{name} already existed".format(name))
         return
 
     script_set_obj = ScriptSet()
@@ -107,7 +113,7 @@ def set_script_set(name, script_names):
     if not os.path.exists(os.path.join(conf.get("PATH_SCRIPT_SET"), name,
                                        "%s.conf" % name)):
         # script set不存在
-        print("script set not found")
+        print("script set {name} not found".format(name))
         return
 
     script_set_obj = ScriptSet()
@@ -251,11 +257,11 @@ class Script(object):
         except CommandTimeoutError:
             # 超时杀掉任务
             p.kill()
-            return "TimeExceed"
+            return 142
         except CommandTerminateError:
             # 被终止杀掉任务
             p.kill()
-            return "Terminated"
+            return 1
 
         finally:
             # 还原工作目录
@@ -303,7 +309,7 @@ class ScriptSet(object):
         self.script_obj_list = []       # Script对象列表
         self.script_name_list = []      # 包含的Script名字列表
         self.script_prop_dict = {}      # script属性列表，{name:{prop1:val,},}
-        self.return_code_list = []      # 返回值列表
+        # self.return_code_list = []      # 返回值列表
         self.conf_obj = None
 
     def initial(self, name, script_name_list=None):
@@ -326,7 +332,7 @@ class ScriptSet(object):
             return
         conf_dict = conf_obj.load_config()
         self.script_name_list = conf_dict.get("script_name_list", [])
-        self.return_code_list = conf_dict.get("return_code_list", [])
+        # self.return_code_list = conf_dict.get("return_code_list", [])
 
     def save_conf(self):
         """保存配置到文件"""
@@ -335,7 +341,7 @@ class ScriptSet(object):
         conf_dict = {
             "name": self.name,
             "script_name_list": self.script_name_list,
-            "return_code_list": self.return_code_list,
+            # "return_code_list": self.return_code_list,
             "script_prop_dict": self.script_prop_dict,
         }
         self.conf_obj.save_config(conf_dict)
@@ -368,7 +374,8 @@ class ScriptSet(object):
         self.script_obj_list = script_obj_list
 
     def run(self, stdout=None, append_env={}):
-        """run scripts"""
+        """按顺序运行脚本集中的脚本。
+        如果脚本返回了成功，则继续执行下一个脚本，返回了其它的就中断"""
         self.load_script()
 
         if stdout is not None:
@@ -378,7 +385,7 @@ class ScriptSet(object):
             f_stdout = open(os.path.join(conf.get("PATH_SCRIPT_SET"),
                                          self.name, "%s.out" % self.name),
                             'a+', 0)
-        return_code_list = []
+        # return_code_list = []
         for ts in self.script_obj_list:
             if isinstance(ts, Script):
                 # 获取脚本属性
@@ -388,17 +395,22 @@ class ScriptSet(object):
                 try:
                     if bg_run:
                         ts.run_bg(stdout=f_stdout, append_env=append_env)
-                        return_code_list.append("BackgroundRunning")
+                        rtn_code = SCRIPT_RESULT_BG_RUNNING
+
                     else:
-                        exit_code = ts.run(stdout=f_stdout,
-                                           append_env=append_env)
-                        return_code_list.append(str(exit_code))
+                        result = ts.run(stdout=f_stdout,
+                                        append_env=append_env)
+                        if result != 0:
+                            # 返回非零，就是说，运行出错了
+                            rtn_code = SCRIPT_RESULT_ERROR_RETURNED
+                            break
+                        else:
+                            rtn_code = SCRIPT_RESULT_SUCCEED
+
                 except:
-                    return_code_list.append("UnexpectedException")
-            else:
-                return_code_list.append("CommandFormatError")
-        self.return_code_list = return_code_list
-        return return_code_list
+                    rtn_code = SCRIPT_RESULT_EXC_OCCUR
+
+        return rtn_code
 
     def get_result(self):
         return self.return_code_list

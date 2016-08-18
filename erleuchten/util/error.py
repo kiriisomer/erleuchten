@@ -19,6 +19,7 @@ class Errno:
     ERRNO_XML_DONAMIN_NAME_CONFLICT = 2006
 
     ERROR_UTIL_ACQUIRE_LOCK_FAILED = 3001
+    ERROR_UNKNOWN_ENV_STATUS = 3002
 
 
 class ErleuchtenException(Exception):
