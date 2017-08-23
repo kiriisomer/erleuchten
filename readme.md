@@ -1,1 +1,1 @@
-erleuchten is a testing manage software
+erleuchten is a trial of testing manage software

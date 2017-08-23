@@ -11,13 +11,15 @@ PATH_CONFIG_FILE = '/etc/erleuchten.conf'
 
 
 default_conf = {
-    PATH_TESTCASE: '/home/erleuchten/testcase',
-    PATH_SCRIPT: '/home/erleuchten/testscript',
-    PATH_SCRIPT_SET: '/home/erleuchten/testscriptset',
-    PATH_VM_TEMPLATE: '/home/erleuchten/vm_template',
-    PATH_VM: '/home/erleuchten/vm',
-    PATH_ENVIRONMENT: '/home/erleuchten/environment',
-    SHELL_EXECUTOR: '/bin/sh',
+    'PATH_TESTCASE': '/home/erleuchten/testcase',
+    "PATH_SCRIPT": '/home/erleuchten/testscript',
+    "PATH_SCRIPT_SET": '/home/erleuchten/testscriptset',
+    "PATH_VM_TEMPLATE": '/home/erleuchten/vm_template',
+    "PATH_VM": '/home/erleuchten/vm',
+    "PATH_ENVIRONMENT": '/home/erleuchten/environment',
+    "SHELL_EXECUTOR": '/bin/sh',
+    "IFCFG_TEMP": '/tmp/tmp-ifcfg',
+    "NEWIFCFG": '/tmp/newifcfg'
 }
 
 

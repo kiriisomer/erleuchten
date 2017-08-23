@@ -3,7 +3,8 @@
 # entry of testcase command
 
 import argparse
-from erleuchten import environment
+from erleuchten import vm
+from erleuchten.vm import VM
 
 
 def main():
@@ -56,44 +57,92 @@ def main():
                          dest='new_name')
     p_clone.set_defaults(func=cmd_clone)
 
+    p_list_interfaces = sub_parsers.add_parser('list-if',
+                                               help='list all interfaces of a \
+                                               domain')
+    p_list_interfaces.add_argument('--domain', help='domain name',
+                                   dest='dom_name', required=True)
+    p_list_interfaces.set_defaults(func=cmd_list_interfaces)
+
+    p_interface_up = sub_parsers.add_parser('if-connect',
+                                            help='bring interface up')
+    p_interface_up.add_argument('--domain', help='domain name',
+                                dest='dom', required=True)
+    p_interface_up.add_argument('--if', help='interface name',
+                                dest='interface', required=True)
+    p_interface_up.set_defaults(func=cmd_interface_up)
+
+    p_interface_down = sub_parsers.add_parser('if-down',
+                                              help='bring interface down')
+    p_interface_down.add_argument('--domain', help='domain name',
+                                  dest='dom', required=True)
+    p_interface_down.add_argument('--if', help='interface name',
+                                  dest='interface', required=True)
+    p_interface_down.set_defaults(func=cmd_interface_down)
+
     args = main_parser.parse_args()
     args.func(args)
 
 
-def cmd_undefine(args):
-    environment.undefine_domain_by_name(args.name)
-
-
-def cmd_poweron_domain(args):
-    environment.poweron_domain_by_name(args.name)
-
-
-def cmd_poweroff_domain(args):
-    if args.force:
-        environment.destroy_domain_by_name(args.name)
-    else:
-        environment.poweroff_domain_by_name(args.name)
-
-
 def cmd_list_domain(args):
-    rtn = environment.list_domains(args.status)
-    print ('\n'.join(rtn))
+    # rtn = vm.list_domains(args.status)
+    # print ('\n'.join(rtn))
+    print("It's not available right now")
 
 
 def cmd_list_domain_disk(args):
-    rtn = environment.list_domain_disk(args.name)
-    for i in rtn:
-        print ('{0}  {1}  {2}'.format(i[0], i[1], i[2]))
+    # rtn = vm.list_domain_disk(args.name)
+    # for i in rtn:
+    #     print ('{0}  {1}  {2}'.format(i[0], i[1], i[2]))
+    print("It's not available right now")
+
+
+def cmd_undefine(args):
+    # vm.undefine_domain_by_name(args.name)
+    print("It's not available right now")
+
+
+def cmd_poweron_domain(args):
+    # vm.poweron_domain_by_name(args.name)
+    print("It's not available right now")
+
+
+def cmd_poweroff_domain(args):
+    # if args.force:
+    #     vm.destrotarget_listy_domain_by_name(args.name)
+    # else:
+    #     vm.poweroff_domain_by_name(args.name)
+    print("It's not available right now")
 
 
 def cmd_attach(args):
-    environment.attach_disk(args.name, args.source, args.target,
-                            args.disk_format)
+    # vm.attach_disk(args.name, args.source, args.target,
+    #                         args.disk_format)
+    print("It's not available right now")
 
 
 def cmd_detach(args):
-    environment.list_domain_disk(args.name, args.target)
+    # vm.list_domain_disk(args.name, args.target)
+    print("It's not available right now")
 
 
 def cmd_clone(args):
-    environment.clone_vm_by_domain_name(args.src_name, args.new_name)
+    # vm.clone_vm_by_domain_name(args.src_name, args.new_name)
+    print("It's not available right now")
+
+
+def cmd_list_interfaces(args):
+    # rtn = vm.list_interfaces(args.dom_name)
+    # for i in rtn:
+    #     print ('{0}  {1}  {2}  {3}'.format(i[0], i[1], i[2], i[3]))
+    print("It's not available right now")
+
+
+def cmd_interface_up(args):
+    # vm.interface_up(args.dom, args.interface)
+    print("It's not available right now")
+
+
+def cmd_interface_down(args):
+    # vm.interface_down(args.dom, args.interface)
+    print("It's not available right now")

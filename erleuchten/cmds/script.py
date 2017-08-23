@@ -3,6 +3,8 @@
 # entry of script set command
 
 import argparse
+import libvirt
+from erleuchten.utils.error import ErleuchtenException
 from erleuchten import script
 
 
@@ -35,7 +37,13 @@ def main():
     p_list.set_defaults(func=cmd_list)
 
     args = main_parser.parse_args()
-    args.func(args)
+    try:
+        args.func(args)
+    except (IOError, TypeError, ValueError, OSError, SystemError,
+            IndexError, ErleuchtenException, libvirt.libvirtError), \
+            diag:
+        retval = str(diag)
+        return retval
 
 
 def cmd_create(args):

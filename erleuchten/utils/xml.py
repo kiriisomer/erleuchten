@@ -2,10 +2,10 @@
 
 # xml utilities
 from lxml import etree
-from erleuchten.util.util import ramdom_mac_addr, create_file_path, \
+from erleuchten.utils.util import ramdom_mac_addr, create_file_path, \
     make_file_lock
-from erleuchten.util.error import ErleuchtenException
-from erleuchten.util.error import Errno
+from erleuchten.utils.error import ErleuchtenException
+from erleuchten.utils.error import Errno
 
 
 class XML(object):
@@ -74,6 +74,27 @@ class VMXML(XML):
 
         return rtn_list
 
+    def get_all_interfaces(self):
+        """获取设备 路径名与文件路径"""
+        s = self.xml_root_obj.xpath('/domain/devices/interface')
+        rtn_list = []
+        for x in s:
+            iface_type = (x.get("type"))
+            iface_mac = (x.xpath('mac')[0].get("address"))
+            iface_source = (x.xpath('source')[0].get("bridge"))
+            iface_dev = (x.xpath('target')[0].get("dev"))
+            rtn_list.append([iface_type, iface_mac, iface_source, iface_dev])
+
+        return rtn_list
+
+    def get_bridge(self, interface):
+        """获取设备 路径名与文件路径"""
+        s = self.xml_root_obj.xpath('/domain/devices/interface')
+
+        for i in s:
+            if interface == (i.xpath('target')[0].get("dev")):
+                return (i.xpath('source')[0].get("bridge"))
+
     def get_disk_device_info_by_dev(self, dev_name):
         """通过设备路径名获取磁盘文件路径与磁盘文件格式"""
         s = self.xml_root_obj.xpath('/domain/devices/disk[@device="disk"]'
@@ -92,6 +113,16 @@ class VMXML(XML):
         if len(s) != 1:
             raise ErleuchtenException(Errno.ERRNO_XML_CANNOT_FIND_DOMAIN_NAME)
         s[0].text = new_name
+
+    def modify_interfaces_name(self, names):
+        s = self.xml_root_obj.xpath('/domain/devices/interface/target')
+        # print("there are {0} interface(s)".format(len(s)))
+        if len(s) != 2:
+            raise ErleuchtenException(Errno.ERRNO_XML_INTERFACES_COUNT)
+        tmp = 0
+        for i in s:
+            i.set("dev", names[tmp])
+            tmp += 1
 
     def modify_vm_uuid(self, new_uuid):
         s = self.xml_root_obj.xpath('/domain/uuid')
@@ -166,7 +197,7 @@ class ScriptConf(XML):
         s = self.xml_root_obj.xpath(
             '/erleuchten/script[@name="%s"]' % self.name)
         conf_dict = {}
-        conf_dict["script_name"] = s[0].get("script_name")
+        conf_dict["script_path"] = s[0].get("script_path")
         conf_dict["pid"] = s[0].get("pid")
         conf_dict["exceed_time"] = s[0].get("exceed_time")
         conf_dict["status"] = s[0].get("status")
@@ -176,7 +207,7 @@ class ScriptConf(XML):
         s = self.xml_root_obj.xpath(
             '/erleuchten/script[@name="%s"]' % self.name)
         try:
-            return s[0].get("script_name")
+            return s[0].get("script_path")
         except:
             return None
 
@@ -215,33 +246,17 @@ class ScriptSetConf(XML):
         else:
             set_obj = result[0]
 
-        # 创建一个script_prop元素保存特定用于脚本的属性
-        result = root.xpath('/erleuchten/script_prop')
-        if len(result) == 0:
-            prop_obj = etree.SubElement(root, "script_prop")
-        else:
-            prop_obj = result[0]
-
         for i, j in conf_dict.items():
             if i == 'script_name_list':
                 # 使用子元素保存script
-                for k in set_obj.xpath("script"):
+                for k in set_obj.iterchildren():
                     set_obj.remove(k)
                 for m in conf_dict[i]:
                     s = etree.SubElement(set_obj, "script")
                     s.set('name', str(m))
-            elif i == 'script_prop_dict':
-                # 使用子元素保存script prop
-                for k in prop_obj.xpath("script"):
-                    prop_obj.remove(k)
-                for n, p in conf_dict[i].items():
-                    s = etree.SubElement(prop_obj, "script")
-                    s.set('name', str(n))
-                    for x, y in p.items():
-                        s.set(str(x), str(y))
-            elif i == 'return_code_list':
-                # 使用空格分隔的字符串保存返回代码
-                set_obj.set(str(i), ' '.join([str(x) for x in j]))
+            # elif i == 'return_code_list':
+            #     # 使用空格分隔的字符串保存返回代码
+            #     set_obj.set(str(i), ' '.join([str(x) for x in j]))
             else:
                 set_obj.set(str(i), str(j))
 
@@ -255,34 +270,17 @@ class ScriptSetConf(XML):
         if self.xml_root_obj is None:
             return {}
 
-        conf_dict = {}
-        result = self.xml_root_obj.xpath(
+        set_obj = self.xml_root_obj.xpath(
             '/erleuchten/scriptset[@name="%s"]' % self.name)
-        if len(result) > 0:
-            set_obj = result[0]
-            conf_dict["return_code_list"] = [
-                x for x in set_obj.get("return_code_list").split()]
-            conf_dict["status"] = set_obj.get("status")
+        conf_dict = {}
+        # conf_dict["return_code_list"] = [
+        #     x for x in set_obj[0].get("return_code_list").split()]
+        # conf_dict["status"] = set_obj[0].get("status")
 
-            script_name_list = []
-            for s in set_obj.xpath('script'):
-                script_name_list.append(s.get("name"))
-            conf_dict["script_name_list"] = script_name_list
-
-        result = self.xml_root_obj.xpath('/erleuchten/script_prop')
-        if len(result) > 0:
-            prop_obj = result[0]
-            temp_dict_1 = {}
-            for i in prop_obj.xpath('script'):
-                temp_dict_2 = {}
-                name = i.get("name")
-                for j, k in i.items():
-                    if j == "name":
-                        continue
-                    temp_dict_2[j] = k
-                temp_dict_1[name] = temp_dict_2
-
-            conf_dict["script_prop_dict"] = temp_dict_1
+        script_name_list = []
+        for s in set_obj[0].xpath('script'):
+            script_name_list.append(s.get("name"))
+        conf_dict["script_name_list"] = script_name_list
 
         return conf_dict
 
@@ -312,7 +310,6 @@ class EnvConf(XML):
         else:
             root = self.xml_root_obj
 
-        # 没有script则新建一个
         result = root.xpath('/erleuchten/env[@name="%s"]' % self.name)
         if len(result) == 0:
             set_obj = etree.SubElement(root, "env")
@@ -327,13 +324,20 @@ class EnvConf(XML):
                     set_obj.remove(vm)
                 for vm in conf_dict[i]:
                     r = etree.SubElement(set_obj, "vm")
-                    r.set('name', str(vm['name']))
-                    r.set('src_name', str(vm['src_name']))
-                    r.set('if_name', str(vm['if_name']))
-                    r.set('addr', str(vm['addr']))
-                    r.set('mask', str(vm['mask']))
-                    r.set('gateway', str(vm['gateway']))
-                    r.set('dns', str(vm['dns']))
+                    r.set('vm_name', str(vm['vm_name']))
+                    r.set('vm_src_name', str(vm['vm_src_name']))
+                    r.set('manage_ifcfg_source',
+                          str(vm['manage_ifcfg_source']))
+                    r.set('manage_if_name', str(vm['manage_if_name']))
+                    r.set('manage_addr', str(vm['manage_addr']))
+                    r.set('manage_mask', str(vm['manage_mask']))
+                    r.set('manage_gateway', str(vm['manage_gateway']))
+                    r.set('manage_dns', str(vm['manage_dns']))
+                    r.set('storage_ifcfg_source',
+                          str(vm['storage_ifcfg_source']))
+                    r.set('storage_if_name', str(vm['storage_if_name']))
+                    r.set('storage_addr', str(vm['storage_addr']))
+                    r.set('storage_mask', str(vm['storage_mask']))
                     r.set('ssh_user', str(vm['ssh_user']))
                     r.set('ssh_password', str(vm['ssh_password']))
             else:
@@ -357,13 +361,18 @@ class EnvConf(XML):
         vm_info_list = []
         for s in set_obj[0].xpath('vm'):
             vm = {}
-            vm['name'] = s.get('name')
-            vm['src_name'] = s.get('src_name')
-            vm['if_name'] = s.get('if_name')
-            vm['addr'] = s.get('addr')
-            vm['mask'] = s.get('mask')
-            vm['gateway'] = s.get('gateway')
-            vm['dns'] = s.get('dns')
+            vm['vm_name'] = s.get('vm_name')
+            vm['vm_src_name'] = s.get('vm_src_name')
+            vm['manage_ifcfg_source'] = s.get('manage_ifcfg_source')
+            vm['manage_if_name'] = s.get('manage_if_name')
+            vm['manage_addr'] = s.get('manage_addr')
+            vm['manage_mask'] = s.get('manage_mask')
+            vm['manage_gateway'] = s.get('manage_gateway')
+            vm['manage_dns'] = s.get('manage_dns')
+            vm['storage_ifcfg_source'] = s.get('storage_ifcfg_source')
+            vm['storage_if_name'] = s.get('storage_if_name')
+            vm['storage_addr'] = s.get('storage_addr')
+            vm['storage_mask'] = s.get('storage_mask')
             vm['ssh_user'] = s.get('ssh_user')
             vm['ssh_password'] = s.get('ssh_password')
             vm_info_list.append(vm)
@@ -377,3 +386,108 @@ class EnvConf(XML):
             '/erleuchten/env[@name="%s"]/vm' % self.name)
 
         return [x.get("name") for x in s]
+
+
+class TestcaseConf(XML):
+    """对Script类的xml配置文件操作的封装。"""
+
+    def __init__(self, xml_path, name):
+        super(TestcaseConf, self).__init__(xml_path)
+        self.name = name
+
+    def get_name(self):
+        if self.xml_root_obj is None:
+            return None
+        s = self.xml_root_obj.xpath(
+            '/erleuchten/testcase[@name="%s"]' % self.name)
+        try:
+            return s[0].get("name")
+        except:
+            return None
+
+    def save_config(self, conf_dict, write_file=True):
+        """将配置保存起来"""
+        # 没有root则新建一个
+        if self.xml_root_obj is None:
+            root = etree.Element("erleuchten")
+        else:
+            root = self.xml_root_obj
+
+        # 没有testcase则新建一个
+        result = root.xpath('/erleuchten/testcase[@name="%s"]' % self.name)
+        if len(result) == 0:
+            set_obj = etree.SubElement(root, "testcase")
+            set_obj.set('name', self.name)
+        else:
+            set_obj = result[0]
+
+        # 创建一个scriptset_prop元素保存特定用于脚本的属性
+        result = root.xpath('/erleuchten/scriptset_prop')
+        if len(result) == 0:
+            prop_obj = etree.SubElement(root, "scriptset_prop")
+        else:
+            prop_obj = result[0]
+
+        for i, j in conf_dict.items():
+            if i == 'test_scriptset_name_list':
+                # 使用子元素保存vm信息
+                for s in set_obj.iterchildren():
+                    set_obj.remove(s)
+                for s in conf_dict[i]:
+                    r = etree.SubElement(set_obj, "scriptset")
+                    r.set('name', str(s))
+            elif i == 'scriptset_prop_dict':
+                # 使用子元素保存script prop
+                for k in prop_obj.xpath("scriptset"):
+                    prop_obj.remove(k)
+                for n, p in conf_dict[i].items():
+                    s = etree.SubElement(prop_obj, "scriptset")
+                    s.set('name', str(n))
+                    for x, y in p.items():
+                        s.set(str(x), str(y))
+            else:
+                set_obj.set(str(i), str(j))
+
+        self.xml_root_obj = root
+        if write_file:
+            self.write_xml_conf()
+
+    def load_config(self):
+        """读取配置，返回一个字典"""
+        self.open_parser()
+        if self.xml_root_obj is None:
+            return {}
+
+        conf_dict = {}
+        result = self.xml_root_obj.xpath(
+            '/erleuchten/testcase[@name="%s"]' % self.name)
+        if len(result) > 0:
+            testcase_obj = result[0]
+            conf_dict["status"] = testcase_obj.get("status")
+            conf_dict["env_name"] = testcase_obj.get("env_name")
+            conf_dict["pidlist"] = testcase_obj.get("pidlist")
+            conf_dict["prepare_scriptset_name"] = \
+                testcase_obj.get("prepare_scriptset_name")
+
+            scriptset_name_list = []
+            for s in testcase_obj.xpath('scriptset'):
+                scriptset_name_list.append(s.get('name'))
+
+            conf_dict["test_scriptset_name_list"] = scriptset_name_list
+
+        result = self.xml_root_obj.xpath('/erleuchten/scriptset_prop')
+        if len(result) > 0:
+            prop_obj = result[0]
+            temp_dict_1 = {}
+            for i in prop_obj.xpath('scriptset'):
+                temp_dict_2 = {}
+                name = i.get("name")
+                for j, k in i.items():
+                    if j == "name":
+                        continue
+                    temp_dict_2[j] = k
+                temp_dict_1[name] = temp_dict_2
+
+            conf_dict["scriptset_prop_dict"] = temp_dict_1
+
+        return conf_dict

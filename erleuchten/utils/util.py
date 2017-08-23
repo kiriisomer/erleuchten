@@ -10,15 +10,15 @@ import fcntl
 
 from contextlib import contextmanager
 
-from erleuchten.util.error import ErleuchtenException
-from erleuchten.util.error import Errno
+from erleuchten.utils.error import ErleuchtenException
+from erleuchten.utils.error import Errno
 
 _DEFAULT_MODE = stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO
 
 
 def lock_fp(fp):
     try:
-        fcntl.flock(fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        fcntl.flock(fp, fcntl.LOCK_EX)
     except IOError:
         raise ErleuchtenException(Errno.ERROR_UTIL_ACQUIRE_LOCK_FAILED)
 

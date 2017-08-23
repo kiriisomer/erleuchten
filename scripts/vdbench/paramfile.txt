@@ -1,0 +1,4 @@
+hd=localhost
+fsd=fsd1,anchor=/mnt/test/1001/,depth=7,width=8,files=9,sizes=1M
+fwd=fwd1,fsd=fsd1,host=localhost,xfersize=1M,fileio=random,fileselect=random,threads=64
+rd=rd1,fwd=fwd1,fwdrate=max,format=yes,elapsed=30,interval=1

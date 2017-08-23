@@ -1,0 +1,86 @@
+# coding:utf-8
+
+# exception class
+
+
+class Errno:
+    ERRNO_UNKNOWN_ERROR = 1000
+
+    ERRNO_OPENCONF_ERROR = 1001
+    ERRNO_SAVE_PATH_NOT_SPECIFY = 1002
+    ERRNO_CANNOT_FIND_VM_IN_ENV = 1003
+    ERRNO_CANNOT_FIND_VM_IN_KVM = 1004
+    ERRNO_APPENDIX_ONLY_SUPPORT_FILE = 1005
+
+    ERRNO_XML_CANNOT_FIND_DISK = 2001
+    ERRNO_XML_CANNOT_FIND_INTERFACE = 2002
+    ERRNO_XML_CANNOT_FIND_DOMAIN_NAME = 2003
+    ERRNO_XML_CANNOT_FIND_DOMAIN_UUID = 2004
+    ERRNO_XML_DONAMIN_UUID_CONFLICT = 2005
+    ERRNO_XML_DONAMIN_NAME_CONFLICT = 2006
+    ERRNO_XML_OPEN_CONF_FAILED = 2100
+    ERRNO_XML_INTERFACES_COUNT = 2101
+
+    ERROR_UTIL_ACQUIRE_LOCK_FAILED = 3001
+
+    ERRNO_VM_NAME_CONFLICT = 4001
+    ERRNO_VM_STATUS_UNKNOWN = 4002
+    ERRNO_VM_START_FAILED = 4003
+    ERRNO_VM_ALREADY_CLONED = 4004
+    ERRNO_VM_NOT_RUNNING = 4005
+    ERRNO_VM_NO_SUCH_INTERFACE = 4006
+    ERRNO_WAIT_VM_START_ERROR = 4007
+    ERRNO_SOURCE_VM_RUNNING = 4008
+
+    ERRNO_CANNOT_FIND_ENV = 5001
+    ERRNO_ENV_ALREADY_EXISTS = 5002
+    ERROR_UNKNOWN_ENV_STATUS = 5003
+    ERROR_SCRIPT_RETURN_FAIL = 5004
+    ERROR_TESTCASE_RUNNING = 5005
+
+    ERRNO_NO_SUCH_FILE = 6001
+
+    ERROR_TESTCASE_STATUS_IS_NONE = 7001
+    ERROR_TESTCASE_STATUS_IS_WRONG = 7002
+    ERRNO_ENV_NOT_EXISTS = 7003
+    ERRNO_SCRIPTSET_ALREADY_EXISTS = 7004
+    ERRNO_SCRIPTSET_NOT_EXISTS = 7005
+    ERRNO_SCRIPT_ALREADY_EXISTS = 7006
+    ERRNO_SCRIPT_NOT_EXISTS = 7007
+    ERRNO_TESTCASE_ALREADY_EXISTS = 7008
+    ERRNO_TESTCASE_NOT_EXISTS = 7009
+    ERRNO_VM_NOT_EXISTS = 7010
+    ERRNO_VM_HAS_BEEN_DEFINED = 7011
+
+ERRNO_STR_TABLE = {
+    'ERRNO_UNKNOWN_ERROR': "unknown error",
+}
+
+
+DEFAULT_FORMAT_PARAM_DICT = {}
+
+
+class CommandTimeoutError(Exception):
+    """执行命令专用异常，用于捕捉超时"""
+    pass
+
+
+class CommandTerminateError(Exception):
+    """执行命令专用异常，用于捕捉收到的强制关闭命令"""
+    pass
+
+
+class ErleuchtenException(Exception):
+
+    def __init__(self, errno=Errno.ERRNO_UNKNOWN_ERROR, format_dict={}):
+        self.errno = errno
+        self.format_dict = format_dict
+        Exception.__init__(self, "erleuchten ERRNO: %s" % errno)
+
+
+class FileLockException(Exception):
+    pass
+
+
+def get_err_str_by_errno(errno, format_param_dict={}):
+    """通过错误id获取错误字符串"""
